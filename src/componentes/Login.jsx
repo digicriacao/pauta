@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
+import { chamaFuncao } from "@/lib/funcoes";
 
 /**
- * Login por usuário + senha. Quem resolve usuário → e-mail é o servidor
- * (/api/auth/usuario) — o e-mail existe só para recuperar a senha e nunca
- * volta pro navegador.
+ * Login por usuário + senha. Quem resolve usuário → e-mail é a Edge Function
+ * `auth-usuario`, no Supabase — o e-mail existe só para recuperar a senha e
+ * nunca volta pro navegador.
  */
 export default function Login({ perfil, podeEditar, aoFechar, aoEntrar, aoSair }) {
   const [modo, setModo] = useState(perfil ? "sessao" : "login");
@@ -20,14 +21,9 @@ export default function Login({ perfil, podeEditar, aoFechar, aoEntrar, aoSair }
   async function chamar(acao, corpo) {
     setErro(""); setOk(""); setOcupado(true);
     try {
-      const r = await fetch("/api/auth/usuario", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ acao, usuario, ...corpo }),
-      });
-      const j = await r.json();
-      if (!r.ok) { setErro(j.erro || "Não deu certo."); return null; }
-      return j;
+      const r = await chamaFuncao("auth-usuario", { acao, usuario, ...corpo });
+      if (!r.ok) { setErro(r.dados.erro || "Não deu certo."); return null; }
+      return r.dados;
     } catch {
       setErro("Sem resposta do servidor.");
       return null;

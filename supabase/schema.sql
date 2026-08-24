@@ -224,12 +224,11 @@ on conflict (nome_azure) do nothing;
 -- update perfis set papel='admin' where usuario='seu-usuario';
 
 -- ============================================================================
--- AGENDADOR DO SYNC — rode este bloco DEPOIS que o site estiver no ar
+-- AGENDADOR DO SYNC — rode este bloco DEPOIS de publicar a Edge Function
 -- ============================================================================
--- Por que aqui e não na Vercel: no plano gratuito da Vercel o cron só roda
--- UMA VEZ POR DIA. O pg_cron do Supabase roda de 10 em 10 minutos de graça —
--- e, de quebra, essa atividade constante impede o projeto Free de ser pausado
--- por inatividade (o Supabase pausa depois de ~7 dias parado).
+-- O pg_cron chama a função `sync` de 10 em 10 minutos. De quebra, essa
+-- atividade constante impede o projeto Free de ser pausado por inatividade
+-- (o Supabase pausa depois de ~7 dias parado).
 --
 -- Troque as duas coisas marcadas e rode:
 
@@ -240,16 +239,33 @@ on conflict (nome_azure) do nothing;
 --   'sync-azure',
 --   '*/10 * * * *',
 --   $$
---   select net.http_get(
---     url     := 'https://SEU-SITE.vercel.app/api/sync',
---     headers := '{"Authorization": "Bearer SEU_CRON_SECRET"}'::jsonb
+--   select net.http_post(
+--     url     := 'https://SEU-PROJETO.supabase.co/functions/v1/sync',
+--     headers := jsonb_build_object(
+--                  'Content-Type',  'application/json',
+--                  'apikey',        'SUA_ANON_KEY',
+--                  'Authorization', 'Bearer SUA_ANON_KEY',
+--                  'x-cron-secret', 'SEU_CRON_SECRET'
+--                ),
+--     body    := '{}'::jsonb
 --   );
 --   $$
 -- );
 
--- Para conferir se está agendado:
+-- Para rodar uma vez agora, na mão (o primeiro sync busca 60 dias):
+--   select net.http_post(
+--     url     := 'https://SEU-PROJETO.supabase.co/functions/v1/sync',
+--     headers := jsonb_build_object(
+--                  'Content-Type',  'application/json',
+--                  'apikey',        'SUA_ANON_KEY',
+--                  'Authorization', 'Bearer SUA_ANON_KEY',
+--                  'x-cron-secret', 'SEU_CRON_SECRET'
+--                ),
+--     body    := '{}'::jsonb
+--   );
+
+-- Conferir:
 --   select * from cron.job;
--- Para ver as últimas execuções:
---   select * from cron.job_run_details order by start_time desc limit 20;
--- Para desligar:
+--   select * from sync_log order by inicio desc limit 5;
+-- Desligar:
 --   select cron.unschedule('sync-azure');

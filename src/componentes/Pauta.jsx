@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDados, useSessao } from "@/lib/dados";
 import { supabase } from "@/lib/supabase-browser";
+import { chamaFuncao } from "@/lib/funcoes";
 import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
 import Cabecalho from "./Cabecalho";
 import Resumo from "./Resumo";
@@ -88,20 +89,21 @@ export default function Pauta() {
     [doMes, filtros, cfg, nomeRec]
   );
 
-  /** Colou o link: busca o card no servidor e abre o modo foco. */
+  /** Colou o link: a Edge Function lê o card e a tela abre no modo foco. */
   async function aoColar(azureId) {
     if (!podeEditar) return setMostraLogin(true);
     const jaTem = pedidos.find((p) => p.azure_id === azureId);
     if (jaTem) return aviso(`O card #${azureId} já está na pauta — “${jaTem.titulo}”.`);
     try {
       const { data } = (await supabase()?.auth.getSession()) || {};
-      const r = await fetch(`/api/azure/${azureId}`, {
-        headers: { Authorization: `Bearer ${data?.session?.access_token || ""}` },
-      });
-      const j = await r.json();
-      if (!r.ok) return aviso(j.erro || "Não consegui ler o card no Azure.");
-      if (j.jaNaPauta) return aviso(`O card #${azureId} já está na pauta — “${j.jaNaPauta.titulo}”.`);
-      setFoco(j.card);
+      const { ok, dados } = await chamaFuncao(
+        "azure-card",
+        { id: azureId },
+        data?.session?.access_token,
+      );
+      if (!ok) return aviso(dados.erro || "Não consegui ler o card no Azure.");
+      if (dados.jaNaPauta) return aviso(`O card #${azureId} já está na pauta — “${dados.jaNaPauta.titulo}”.`);
+      setFoco(dados.card);
     } catch {
       aviso("Não consegui falar com o Azure agora.");
     }
