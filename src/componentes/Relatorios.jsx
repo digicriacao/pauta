@@ -88,6 +88,10 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
   const n = base.length || 1;
   const porDia = [...new Set(base.map((p) => p.data_entrega).filter(Boolean))].sort()
     .map((d) => ({ rot: fmtBRL(d), curto: fmtBR(d), v: base.filter((p) => p.data_entrega === d).length }));
+  const somaArtes = (arr) => arr.reduce((s2, p) => s2 + (p.qtd_artes ?? 1), 0);
+  const artesPorRec = [...new Set(base.map(nomeRec).filter(Boolean))]
+    .map((x) => ({ rot: x, v: somaArtes(base.filter((p) => nomeRec(p) === x)) }))
+    .sort((a, b) => b.v - a.v);
   const porTipo = cfg.tipos
     .map((t) => ({ rot: t.nome, cor: t.cor, v: base.filter((p) => p.tipo_id === t.id).length }))
     .filter((d) => d.v);
@@ -105,6 +109,8 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
   const pico = porDia.reduce((m, d) => (d.v > m.v ? d : m), { v: 0, rot: "—" });
   const ajustes = base.filter((p) => /ajuste/i.test(nomeTipo(p))).length;
   const entregues = base.filter((p) => p.entregue).length;
+  const artes = base.filter((p) => p.entregue).reduce((s2, p) => s2 + (p.qtd_artes ?? 1), 0);
+  const artesTotal = base.reduce((s2, p) => s2 + (p.qtd_artes ?? 1), 0);
 
   async function exporta(tipo) {
     if (tipo !== "xls") {
@@ -115,10 +121,10 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
       );
       return;
     }
-    const cab = ["Solicitação","Card","Pasta","Demandante","Pedido","Tipo","Entrega","Azure","Interno","Entrega combinada","Entregue","Recurso","Obs"];
+    const cab = ["Solicitação","Card","Pasta","Demandante","Pedido","Artes","Tipo","Entrega","Azure","Interno","Entrega combinada","Entregue","Recurso","Obs"];
     const linha = (p) => [
-      fmtBRL(p.data_solicitacao), p.azure_id ? "#" + p.azure_id : "sem card", p.pasta_codigo || "",
-      nomeDem(p), p.titulo, nomeTipo(p), fmtBRL(p.data_entrega), p.azure_state, nomeSt(p),
+      fmtBRL(p.data_solicitacao), "#" + p.azure_id, p.pasta_codigo || "",
+      nomeDem(p), p.titulo, p.qtd_artes ?? 1, nomeTipo(p), fmtBRL(p.data_entrega), p.azure_state, nomeSt(p),
       p.entrega_em || "", p.entregue ? "sim" : "não", nomeRec(p), p.observacao || "",
     ];
     const csv = "﻿" + [cab, ...base.map(linha)].map((l) => l.map(csvCampo).join(";")).join("\r\n");
@@ -129,7 +135,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 400);
-    aviso(`Planilha gerada: ${base.length} linhas, 13 colunas.`);
+    aviso(`Planilha gerada: ${base.length} linhas, 14 colunas, ${artesTotal} artes.`);
   }
 
   const kpi = (k, v, s) => (
@@ -173,7 +179,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
         {kpi("Pedidos no recorte", base.length, base.length === pedidos.length ? "mês inteiro" : `de ${pedidos.length} no mês`)}
         {kpi("Entregues", entregues, `${Math.round((entregues / n) * 100)}% do recorte`)}
         {kpi("Ajustes", ajustes, `${Math.round((ajustes / n) * 100)}% é refação`)}
-        {kpi("Sem card", base.filter((p) => !p.azure_id).length, "não existem no Azure")}
+        {kpi("Artes no mês", artes, `de ${artesTotal} previstas`)}
         {kpi("Dia mais cheio", pico.v, pico.rot)}
         {kpi("Pessoas envolvidas", recTodos.length, `${dem.length} demandantes`)}
       </div>
@@ -208,8 +214,9 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
         <table className="res">
           <thead>
             <tr>
-              <th>Recurso</th><th className="num">Pedidos</th><th className="num">Ajustes</th>
-              <th className="num">Entregues</th><th className="num">% do recorte</th><th style={{ width: 160 }} />
+              <th>Recurso</th><th className="num">Pedidos</th><th className="num">Artes</th>
+              <th className="num">Ajustes</th><th className="num">Entregues</th>
+              <th className="num">% do recorte</th><th style={{ width: 150 }} />
             </tr>
           </thead>
           <tbody>
@@ -220,6 +227,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
                 <tr key={d.rot}>
                   <td>{d.rot}</td>
                   <td className="num">{d.v}</td>
+                  <td className="num">{rs.reduce((s2, p) => s2 + (p.qtd_artes ?? 1), 0)}</td>
                   <td className="num">{rs.filter((p) => /ajuste/i.test(nomeTipo(p))).length}</td>
                   <td className="num">{rs.filter((p) => p.entregue).length}</td>
                   <td className="num">{pct}%</td>

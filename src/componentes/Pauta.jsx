@@ -5,6 +5,7 @@ import { useDados, useSessao } from "@/lib/dados";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
 import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
+import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado } from "@/lib/constantes";
 import Cabecalho from "./Cabecalho";
 import Resumo from "./Resumo";
 import Grade from "./Grade";
@@ -20,6 +21,7 @@ export default function Pauta() {
   const [mesSel, setMesSel] = useState(() => hojeISO().slice(0, 7));
   const [vista, setVista] = useState("pauta");
   const [filtros, setFiltros] = useState({ dem: "", tipo: "", status: "", rec: "", q: "" });
+  const [ordem, setOrdem] = useState(ORDEM_PADRAO);
   const [foco, setFoco] = useState(null);
   const [salvandoFoco, setSalvandoFoco] = useState(false);
   const [mostraLogin, setMostraLogin] = useState(false);
@@ -28,7 +30,6 @@ export default function Pauta() {
   const [dicaTxt, setDicaTxt] = useState(null);
   const [dicaPos, setDicaPos] = useState({ x: 0, y: 0 });
   const tmr = useRef(null);
-  const headerRef = useRef(null);
 
   const aviso = useCallback((txt) => {
     setToast(txt);
@@ -40,6 +41,25 @@ export default function Pauta() {
     if (!txt) return setDicaTxt(null);
     setDicaTxt(txt);
     setDicaPos({ x: ev.clientX + 14, y: ev.clientY - 36 });
+  }, []);
+
+  // Cada pessoa mantém a própria ordenação preferida.
+  useEffect(() => {
+    try {
+      const salvo = JSON.parse(localStorage.getItem(LS_ORDEM) || "null");
+      if (salvo?.campo) setOrdem(salvo);
+    } catch {}
+  }, []);
+
+  const aoOrdenar = useCallback((coluna) => {
+    setOrdem((atual) => {
+      const nova =
+        atual.campo === coluna.ord
+          ? { campo: coluna.ord, dir: atual.dir === "asc" ? "desc" : "asc" }
+          : { campo: coluna.ord, dir: coluna.dirPadrao || "asc" };
+      try { localStorage.setItem(LS_ORDEM, JSON.stringify(nova)); } catch {}
+      return nova;
+    });
   }, []);
 
   // A barra de filtros gruda logo abaixo do cabeçalho, que muda de altura.
@@ -59,18 +79,47 @@ export default function Pauta() {
   const meses = useMemo(() => mesesDoAno(hojeISO().slice(0, 7)), []);
   const contaMes = useCallback((ym) => pedidos.filter((p) => mesDe(p) === ym).length, [pedidos]);
 
-  const doMes = useMemo(
-    () =>
-      pedidos
-        .filter((p) => mesDe(p) === mesSel)
-        .sort((a, b) => String(b.data_solicitacao || "").localeCompare(String(a.data_solicitacao || ""))),
-    [pedidos, mesSel]
-  );
-
   const nomeRec = useCallback(
     (p) => cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to)?.nome_pauta || p.azure_assigned_to || "",
     [cfg.recursos]
   );
+
+  /** O valor pelo qual cada coluna ordena. Nome para pessoas, posição para status. */
+  const valorOrdem = useCallback(
+    (p, campo) => {
+      switch (campo) {
+        case "demandante":     return cfg.demandantes.find((d) => d.id === p.demandante_id)?.nome ?? "";
+        case "tipo":           return cfg.tipos.find((t) => t.id === p.tipo_id)?.ordem ?? null;
+        case "status_interno": return cfg.status.find((s) => s.id === p.status_interno_id)?.ordem ?? null;
+        case "azure_state":    return p.azure_state ? posEstado(MAPA_ESTADO[p.azure_state] || p.azure_state) : null;
+        case "recurso":        return nomeRec(p) || "";
+        case "qtd_artes":      return p.qtd_artes ?? 0;
+        default:               return p[campo] ?? "";
+      }
+    },
+    [cfg, nomeRec]
+  );
+
+  const doMes = useMemo(() => {
+    const vazio = (v) => v === null || v === undefined || v === "";
+    const sinal = ordem.dir === "asc" ? 1 : -1;
+    return pedidos
+      .filter((p) => mesDe(p) === mesSel)
+      .slice()
+      .sort((a, b) => {
+        const va = valorOrdem(a, ordem.campo);
+        const vb = valorOrdem(b, ordem.campo);
+        // Linha sem valor vai sempre para o fim, seja qual for a direção.
+        if (vazio(va) && vazio(vb)) return 0;
+        if (vazio(va)) return 1;
+        if (vazio(vb)) return -1;
+        const cmp =
+          typeof va === "number" && typeof vb === "number"
+            ? va - vb
+            : String(va).localeCompare(String(vb), "pt", { numeric: true });
+        return cmp * sinal;
+      });
+  }, [pedidos, mesSel, ordem, valorOrdem]);
 
   const visiveis = useMemo(
     () =>
@@ -96,11 +145,7 @@ export default function Pauta() {
     if (jaTem) return aviso(`O card #${azureId} já está na pauta — “${jaTem.titulo}”.`);
     try {
       const { data } = (await supabase()?.auth.getSession()) || {};
-      const { ok, dados } = await chamaFuncao(
-        "azure-card",
-        { id: azureId },
-        data?.session?.access_token,
-      );
+      const { ok, dados } = await chamaFuncao("azure-card", { id: azureId }, data?.session?.access_token);
       if (!ok) return aviso(dados.erro || "Não consegui ler o card no Azure.");
       if (dados.jaNaPauta) return aviso(`O card #${azureId} já está na pauta — “${dados.jaNaPauta.titulo}”.`);
       setFoco(dados.card);
@@ -128,15 +173,13 @@ export default function Pauta() {
 
   return (
     <>
-      <div ref={headerRef}>
-        <Cabecalho
-          cliente={cfg.cliente} meses={meses} mesAtual={hojeISO().slice(0, 7)}
-          mesSel={mesSel} setMesSel={setMesSel} contaMes={contaMes}
-          perfil={perfil} podeEditar={podeEditar} ehAdmin={ehAdmin}
-          aoLogin={() => setMostraLogin(true)} aoAdmin={() => setMostraAdmin(true)}
-          vista={vista} setVista={setVista}
-        />
-      </div>
+      <Cabecalho
+        cliente={cfg.cliente} meses={meses} mesAtual={hojeISO().slice(0, 7)}
+        mesSel={mesSel} setMesSel={setMesSel} contaMes={contaMes}
+        perfil={perfil} podeEditar={podeEditar} ehAdmin={ehAdmin}
+        aoLogin={() => setMostraLogin(true)} aoAdmin={() => setMostraAdmin(true)}
+        vista={vista} setVista={setVista}
+      />
 
       <main className="wrap">
         {vista === "pauta" && <Resumo pedidos={doMes} mesSel={mesSel} cfg={cfg} />}
@@ -158,7 +201,7 @@ export default function Pauta() {
               </select>
               <select className="f" value={filtros.rec} onChange={(e) => setFiltros({ ...filtros, rec: e.target.value })}>
                 <option value="">Recurso</option>
-                {[...new Set(pedidos.map(nomeRec).filter(Boolean))].sort().map((r) => <option key={r}>{r}</option>)}
+                {[...new Set(pedidos.map(nomeRec).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt")).map((r) => <option key={r}>{r}</option>)}
               </select>
               <input className="search" type="search" placeholder="Buscar pedido…"
                 value={filtros.q} onChange={(e) => setFiltros({ ...filtros, q: e.target.value.toLowerCase().trim() })} />
@@ -172,6 +215,7 @@ export default function Pauta() {
             <Grade
               pedidos={visiveis} cfg={cfg} podeEditar={podeEditar}
               salvar={salvarCampo} remover={removerPedido} aoColar={aoColar} aviso={aviso}
+              ordem={ordem} aoOrdenar={aoOrdenar}
             />
           </section>
         ) : (

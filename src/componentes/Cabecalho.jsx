@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { NOME_MES } from "@/lib/formato";
+import { BASE } from "@/lib/constantes";
 
 export default function Cabecalho({
   cliente, meses, mesAtual, mesSel, setMesSel, contaMes,
@@ -26,8 +26,10 @@ export default function Cabecalho({
     <header>
       <div className="wrap hrow">
         <div className="brand">
-          <Image className="logo logo-light" src="/logo-rosa.png" alt="Digi" width={90} height={25} priority />
-          <Image className="logo logo-dark" src="/logo-claro.png" alt="Digi" width={90} height={25} priority />
+          {/* <img> puro, não next/image: com `unoptimized` o Next não põe o
+              prefixo do repositório no src, e no GitHub Pages isso dá 404. */}
+          <img className="logo logo-light" src={`${BASE}/logo-rosa.png`} alt="Digi" width="90" height="25" />
+          <img className="logo logo-dark" src={`${BASE}/logo-claro.png`} alt="Digi" width="90" height="25" />
           <span className="brand-name">Pauta</span>
         </div>
         <div className="client"><b>{cliente?.nome || "—"}</b></div>
@@ -68,9 +70,7 @@ export default function Cabecalho({
           {podeEditar ? `✎ Editando · ${perfil.usuario}` : perfil ? `👤 ${perfil.usuario} · sem edição` : "🔒 Só leitura"}
         </button>
 
-        {ehAdmin && (
-          <button className="hbtn" onClick={aoAdmin}>⚙ Admin</button>
-        )}
+        {ehAdmin && <button className="hbtn" onClick={aoAdmin}>⚙ Admin</button>}
 
         <button
           className={`hbtn ${vista === "rel" ? "on" : ""}`}

@@ -60,11 +60,11 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar }) {
             </a>
           </span>
         ) : (
-          <div className="ro mid empty">—</div>
+          <div className="ro empty">—</div>
         )}
       </td>
       <td>
-        <select className="cell mid" value={p.demandante_id ?? ""} disabled={dis}
+        <select className="cell" value={p.demandante_id ?? ""} disabled={dis}
           onChange={(e) => salvar(p.id, { demandante_id: e.target.value ? Number(e.target.value) : null })}>
           <option value=""></option>
           {cfg.demandantes.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
@@ -74,18 +74,28 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar }) {
         <div className="ro" title={p.titulo || ""}>{p.titulo || <em>sem título</em>}</div>
       </td>
       <td>
+        <input className="qtd" type="number" min="0" step="1" inputMode="numeric" disabled={dis}
+          defaultValue={p.qtd_artes ?? 1}
+          title="Quantidade de artes deste pedido"
+          onBlur={(e) => {
+            const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
+            e.target.value = n;
+            if (n !== (p.qtd_artes ?? 1)) salvar(p.id, { qtd_artes: n });
+          }} />
+      </td>
+      <td>
         <Chip valor={p.tipo_id} opcoes={cfg.tipos} desabilitado={dis}
           aoMudar={(v) => salvar(p.id, { tipo_id: v })} />
       </td>
       <td>
         {p.data_entrega
-          ? <div className="ro mono mid">{fmtBR(p.data_entrega)}</div>
-          : <div className="ro mid empty">vem do card</div>}
+          ? <div className="ro mono">{fmtBR(p.data_entrega)}</div>
+          : <div className="ro empty">vem do card</div>}
       </td>
       <td>
         {estado
           ? <span className="azchip"><i style={{ background: corEstado(estado) }} />{estado}</span>
-          : <span className="badge-nocard">sem card</span>}
+          : <div className="ro empty">—</div>}
       </td>
       <td>
         <Chip valor={p.status_interno_id} opcoes={cfg.status} desabilitado={dis}
@@ -99,15 +109,15 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar }) {
           value={paraInputLocal(p.entrega_em)}
           onChange={(e) => salvar(p.id, { entrega_em: deInputLocal(e.target.value) })} />
       </td>
-      <td className="act">
+      <td>
         <button className={`chk ${p.entregue ? "on" : ""}`} disabled={dis}
           title={p.entregue ? "Entregue — clique para reabrir" : "Marcar como entregue"}
           onClick={() => marcar(p)}>✓</button>
       </td>
       <td>
         {p.azure_assigned_to
-          ? <div className="ro mid" title={`Azure: ${p.azure_assigned_to}`}>{recurso?.nome_pauta || p.azure_assigned_to}</div>
-          : <div className="ro mid empty">—</div>}
+          ? <div className="ro" title={`Azure: ${p.azure_assigned_to}`}>{recurso?.nome_pauta || p.azure_assigned_to}</div>
+          : <div className="ro empty">—</div>}
       </td>
       <td>
         <input className="cell" type="text" placeholder="…" disabled={dis} defaultValue={p.observacao || ""}
@@ -115,14 +125,14 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar }) {
             if ((e.target.value || "") !== (p.observacao || "")) salvar(p.id, { observacao: e.target.value || null });
           }} />
       </td>
-      <td className="act">
+      <td>
         <button className="del" disabled={dis} title="Remover linha" onClick={() => remover(p)}>×</button>
       </td>
     </tr>
   );
 }
 
-export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoColar, aviso }) {
+export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoColar, aviso, ordem, aoOrdenar }) {
   const [larguras, setLarguras] = useState({});
   const arraste = useRef(null);
   const [colando, setColando] = useState("");
@@ -137,7 +147,7 @@ export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoCol
     const move = (e) => {
       if (!arraste.current) return;
       const { id, x0, w0 } = arraste.current;
-      setLarguras((l) => ({ ...l, [id]: Math.max(46, w0 + (e.clientX - x0)) }));
+      setLarguras((l) => ({ ...l, [id]: Math.max(56, w0 + (e.clientX - x0)) }));
     };
     const solta = () => {
       if (!arraste.current) return;
@@ -156,6 +166,7 @@ export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoCol
 
   function pegaBorda(e, c) {
     e.preventDefault();
+    e.stopPropagation();
     arraste.current = { id: c.id, x0: e.clientX, w0: larg(c) };
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
@@ -181,18 +192,28 @@ export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoCol
         </colgroup>
         <thead>
           <tr>
-            {COLUNAS.map((c, i) => (
-              <th key={c.id} className={c.dono === "azure" ? "az" : ""}>
-                {c.rotulo}
-                {i < COLUNAS.length - 1 && (
-                  <span className="rz" onMouseDown={(e) => pegaBorda(e, c)} />
-                )}
-              </th>
-            ))}
+            {COLUNAS.map((c, i) => {
+              const ativa = c.ord && ordem.campo === c.ord;
+              return (
+                <th
+                  key={c.id}
+                  className={`${c.dono === "azure" ? "az" : ""} ${c.ord ? "ord" : ""}`}
+                  aria-sort={ativa ? (ordem.dir === "asc" ? "ascending" : "descending") : undefined}
+                  title={c.ord ? "Clique para ordenar por esta coluna" : undefined}
+                  onClick={() => c.ord && aoOrdenar(c)}
+                >
+                  {c.rotulo}
+                  {ativa && <span className="seta">{ordem.dir === "asc" ? "▲" : "▼"}</span>}
+                  {i < COLUNAS.length - 1 && (
+                    <span className="rz" onMouseDown={(e) => pegaBorda(e, c)} />
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
-          {/* linha nova, no topo: a grade é decrescente e o padrão é hoje */}
+          {/* linha nova, sempre no topo: é onde se cola o link do card */}
           <tr className="novo">
             <td><input className="cell" type="date" defaultValue={hojeISO()} disabled /></td>
             <td>
