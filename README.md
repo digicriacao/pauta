@@ -8,6 +8,13 @@ Controle de pauta ligado ao Azure DevOps. Substitui `CRONO_PRUDENTIAL_JUNHO.xlsx
 
 ## Como as peças se encaixam
 
+Duas páginas, dois públicos:
+
+| Endereço | Quem usa | O que mostra |
+|---|---|---|
+| `/pauta-prudential/` | a equipe | tudo, com login para editar |
+| `/pauta-prudential/cliente/` | o cliente | 4 campos, sem login, próximos 7 dias |
+
 ```
 GitHub                          Supabase
 ├─ o código                     ├─ Postgres  → a pauta, as pessoas, as permissões (RLS)
@@ -38,6 +45,13 @@ create policy pedidos_leitura on pedidos for select using (true);
 -- para:
 create policy pedidos_leitura on pedidos for select using (auth.uid() is not null);
 ```
+
+**A página do cliente lê de uma visão, não da tabela.** `/cliente/` consulta
+`pauta_cliente`, uma visão que devolve só data de entrada, demandante, pedido e
+entrega combinada — e só do que sai nos próximos 7 dias. Isso só vira uma
+restrição de verdade depois do **BLOCO 2** em `schema.sql`, que tira do público
+o acesso à tabela `pedidos`. Sem ele, quem abrir o DevTools na página do cliente
+alcança a tabela inteira: a chave pública está no JavaScript das duas páginas.
 
 **No plano gratuito do GitHub, Pages só funciona em repositório público.**
 Repositório privado exige GitHub Pro. Como o código não guarda chave nenhuma,
@@ -83,13 +97,29 @@ git push -u origin main
 Em `dev.azure.com/digidevs/_usersSettings/tokens` › **New Token**, escopo
 **Work Items → Read** apenas. Copie na hora — o Azure só mostra uma vez.
 
-Confirme dois detalhes num card real:
+### Como descobrir o reference name de um campo
 
-- **Qual campo guarda a data de entrega** — no card, `…` › *Copy field
-  reference name*. Se não for `Microsoft.VSTS.Scheduling.DueDate`, guarde o
-  nome para a variável `AZURE_CAMPO_ENTREGA`.
-- **Como o card vira "Prudential"** — `[Prudential]` no título
-  (`AZURE_FILTRO_CLIENTE=titulo`) ou nas Tags (`=tag`).
+O tooltip do Azure mostra o **nome de exibição** ("Target Date", "Campanha"),
+não o reference name que a consulta precisa. O jeito mais rápido de ver os dois
+ao mesmo tempo é abrir um card em formato de dados, logado no navegador:
+
+```
+https://dev.azure.com/digidevs/_apis/wit/workitems/51502?api-version=7.1
+```
+
+Troque `51502` por um card real da Prudential e procure na página (Ctrl+F) por
+`Prudential`. A chave imediatamente antes do valor **é** o reference name — algo
+como `"Custom.Campanha": "Prudential"`. Procure também por `TargetDate` para
+confirmar o campo de data.
+
+Nos cards de vocês, pelos tooltips já se sabe:
+
+| Campo no Azure | Reference name | Variável |
+|---|---|---|
+| Target Date | `Microsoft.VSTS.Scheduling.TargetDate` | `AZURE_CAMPO_ENTREGA` |
+| Campanha | `Custom.Campanha` (confirme pelo link acima) | `AZURE_CAMPO_CLIENTE` |
+
+Como o cliente vem de um campo próprio, use `AZURE_FILTRO_CLIENTE=campo`.
 
 ### 4. Supabase — publicar as três Edge Functions
 
@@ -111,8 +141,9 @@ Depois, em **Edge Functions › Secrets**, cadastre:
 | `AZURE_ORG` | `digidevs` |
 | `AZURE_PROJECT` | `SQUAD PULSE` |
 | `AZURE_PAT` | o token do passo 3 |
-| `AZURE_CAMPO_ENTREGA` | o reference name que você copiou |
-| `AZURE_FILTRO_CLIENTE` | `titulo` ou `tag` |
+| `AZURE_CAMPO_ENTREGA` | `Microsoft.VSTS.Scheduling.TargetDate` |
+| `AZURE_FILTRO_CLIENTE` | `campo` |
+| `AZURE_CAMPO_CLIENTE` | `Custom.Campanha` (confirme o reference name) |
 | `CRON_SECRET` | uma string longa e aleatória, inventada por você |
 | `URL_SITE` | `https://SEU-USUARIO.github.io/pauta-prudential` |
 
@@ -201,6 +232,7 @@ src/app/
   layout.jsx                    tema aplicado antes da primeira pintura
   page.jsx                      só monta <Pauta/>
   globals.css                   todos os tokens e estilos
+  cliente/page.jsx              a página do cliente (/cliente/)
   nova-senha/page.jsx           destino do link de recuperação
 
 src/lib/
@@ -220,6 +252,7 @@ src/componentes/
   Login.jsx                     entrar, criar acesso, esqueci a senha
   Admin.jsx                     pessoas, demandantes, tipos, status, recursos
   Relatorios.jsx                filtros, gráficos, exportação
+  PautaCliente.jsx              a lista enxuta do cliente, sem login
 
 supabase/
   schema.sql                    tabelas, RLS, carga inicial, agendamento
