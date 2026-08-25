@@ -3,9 +3,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { COLUNAS, LS_LARGURAS, MAPA_ESTADO, corEstado } from "@/lib/constantes";
 import { fmtBR, paraInputLocal, deInputLocal, hojeISO } from "@/lib/formato";
-import { urlCard, idDoLink } from "@/lib/azure-cliente";
+import { urlCard, urlNovoCard, idDoLink } from "@/lib/azure-cliente";
 
 const mix = (cor, pct) => `color-mix(in srgb, ${cor} ${pct}, var(--surface))`;
+
+/** Campo de colar link. Dispara assim que reconhece um número de card. */
+function ColarCard({ aoColar, desabilitado, alerta }) {
+  const [txt, setTxt] = useState("");
+  return (
+    <span className="link">
+      <input
+        className={`paste${alerta ? " alerta" : ""}`} placeholder="Colar link card"
+        disabled={desabilitado} value={txt}
+        onChange={(e) => {
+          const v = e.target.value;
+          setTxt(v);
+          const id = idDoLink(v);
+          if (id) { setTxt(""); aoColar(id); }
+        }}
+      />
+    </span>
+  );
+}
 
 function Chip({ valor, opcoes, aoMudar, desabilitado }) {
   const item = opcoes.find((o) => o.id === valor);
@@ -32,13 +51,15 @@ function Chip({ valor, opcoes, aoMudar, desabilitado }) {
   );
 }
 
-function Linha({ p, cfg, podeEditar, salvar, remover, marcar }) {
+function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
   const dis = !podeEditar;
   const estado = MAPA_ESTADO[p.azure_state] || (p.azure_state ? p.azure_state.toUpperCase() : "");
   const recurso = cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to);
+  // Pedido anotado à mão, ainda sem card no Azure: linha incompleta.
+  const rascunho = !p.azure_id;
 
   return (
-    <tr className={p.entregue ? "feito" : ""}>
+    <tr className={`${p.entregue ? "feito" : ""} ${rascunho ? "rascunho" : ""}`}>
       <td>
         <input
           className={`cell${p.data_solicitacao ? "" : " vazio"}`} type="date" disabled={dis}
@@ -47,9 +68,11 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar }) {
         />
       </td>
       <td>
-        <span className="link">
-          <a href={urlCard(p.azure_id)} target="_blank" rel="noopener noreferrer">#{p.azure_id} ↗</a>
-        </span>
+        {rascunho
+          ? <ColarCard alerta desabilitado={dis} aoColar={(id) => aoVincular(p, id)} />
+          : <span className="link">
+              <a href={urlCard(p.azure_id)} target="_blank" rel="noopener noreferrer">#{p.azure_id} ↗</a>
+            </span>}
       </td>
       <td>
         {p.pasta_codigo ? (
@@ -71,7 +94,23 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar }) {
         </select>
       </td>
       <td className="pedido">
-        <div className="ro" title={p.titulo || ""}>{p.titulo || <em>sem título</em>}</div>
+        {rascunho ? (
+          <span className="rasc">
+            <input className="titulo" defaultValue={p.titulo || ""} disabled={dis}
+              placeholder="nome do pedido" title={p.titulo || "nome do pedido"}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (v && v !== (p.titulo || "")) salvar(p.id, { titulo: v });
+              }} />
+            <a className="abrir-card" href={urlNovoCard(p.titulo, cfg.cliente?.nome)}
+               target="_blank" rel="noopener noreferrer"
+               title="Abre o formulário de card novo no Azure, já com este título">
+              ↗ card
+            </a>
+          </span>
+        ) : (
+          <div className="ro" title={p.titulo || ""}>{p.titulo || <em>sem título</em>}</div>
+        )}
       </td>
       <td>
         <input className="qtd" type="number" min="0" step="1" inputMode="numeric" disabled={dis}
@@ -132,10 +171,10 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar }) {
   );
 }
 
-export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoColar, aviso, ordem, aoOrdenar }) {
+export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoColar, aoIniciar, aoVincular, aviso, ordem, aoOrdenar }) {
   const [larguras, setLarguras] = useState({});
   const arraste = useRef(null);
-  const [colando, setColando] = useState("");
+  const [nomeNovo, setNomeNovo] = useState("");
 
   useEffect(() => {
     try { setLarguras(JSON.parse(localStorage.getItem(LS_LARGURAS) || "{}") || {}); } catch {}
@@ -216,22 +255,28 @@ export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoCol
           {/* linha nova, sempre no topo: é onde se cola o link do card */}
           <tr className="novo">
             <td><input className="cell" type="date" defaultValue={hojeISO()} disabled /></td>
-            <td>
-              <span className="link">
-                <input
-                  className="paste" placeholder="Colar link card" disabled={!podeEditar} value={colando}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setColando(v);
-                    const id = idDoLink(v);
-                    if (id) { setColando(""); aoColar(id); }
-                  }}
-                />
-              </span>
-            </td>
-            {COLUNAS.slice(2).map((c) => (
-              <td key={c.id}>{c.id === "titulo" ? <div className="ro empty">vem do card</div> : null}</td>
-            ))}
+            <td><ColarCard desabilitado={!podeEditar} aoColar={aoColar} /></td>
+            {COLUNAS.slice(2).map((c) =>
+              c.id === "titulo" ? (
+                <td key={c.id}>
+                  <input
+                    className="novo-pedido" placeholder="Iniciar pedido" disabled={!podeEditar}
+                    value={nomeNovo}
+                    onChange={(e) => setNomeNovo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      const v = nomeNovo.trim();
+                      if (!v) return;
+                      setNomeNovo("");
+                      aoIniciar(v);
+                    }}
+                    title="Escreva o nome do pedido e aperte Enter. A linha entra sem card, marcada em vermelho."
+                  />
+                </td>
+              ) : (
+                <td key={c.id} />
+              )
+            )}
           </tr>
           {pedidos.map((p) => (
             <Linha key={p.id} p={p} cfg={cfg} podeEditar={podeEditar}
@@ -243,7 +288,7 @@ export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoCol
                 const r = await remover(ped.id);
                 if (r?.erro) aviso(`Não deu para remover: ${r.erro}`);
               }}
-              marcar={marcar} />
+              marcar={marcar} aoVincular={aoVincular} />
           ))}
         </tbody>
       </table>

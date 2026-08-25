@@ -92,6 +92,7 @@ create table if not exists pedidos (
   status_interno_id int references status_internos,
   entrega_em        timestamptz,
   entregue          boolean not null default false,
+  qtd_artes         int not null default 1 check (qtd_artes >= 0),
   observacao        text,
   pedido_origem_id  uuid references pedidos on delete set null,
 
@@ -222,6 +223,13 @@ on conflict (nome_azure) do nothing;
 
 -- ── depois de criar seu primeiro usuário pelo app, vire admin: ──────────────
 -- update perfis set papel='admin' where usuario='seu-usuario';
+
+-- ============================================================================
+-- MIGRAÇÃO — só para quem já rodou este arquivo antes
+-- ============================================================================
+-- Se o banco já existia sem a coluna de quantidade de artes, rode só isto:
+--   alter table pedidos add column if not exists qtd_artes int not null default 1
+--     check (qtd_artes >= 0);
 
 -- ============================================================================
 -- AGENDADOR DO SYNC — rode este bloco DEPOIS de publicar a Edge Function

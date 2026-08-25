@@ -9,7 +9,7 @@ export const COLUNAS = [
   { id: "azure_id",          rotulo: "Link Azure",     largura: 130, dono: "app"   },
   { id: "pasta_codigo",      rotulo: "📁",             largura: 96,  dono: "azure" },
   { id: "demandante_id",     rotulo: "Demandante",     largura: 134, dono: "app",   ord: "demandante",         dirPadrao: "asc"  },
-  { id: "titulo",            rotulo: "Pedido",         largura: 268, dono: "azure" },
+  { id: "titulo",            rotulo: "Pedido",         largura: 304, dono: "azure" },
   { id: "qtd_artes",         rotulo: "🎨",             largura: 74,  dono: "app",   ord: "qtd_artes",          dirPadrao: "desc" },
   { id: "tipo_id",           rotulo: "Tipo",           largura: 126, dono: "app",   ord: "tipo",               dirPadrao: "asc"  },
   { id: "data_entrega",      rotulo: "📅 Entrega",     largura: 118, dono: "azure", ord: "data_entrega",       dirPadrao: "asc"  },

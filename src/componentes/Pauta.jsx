@@ -154,6 +154,51 @@ export default function Pauta() {
     }
   }
 
+  /** "Iniciar pedido": entra só com o nome, sem card, marcado em vermelho. */
+  async function iniciarPedido(nome) {
+    if (!podeEditar) return setMostraLogin(true);
+    const { erro: e } = await criarPedido({
+      cliente_id: cfg.cliente.id,
+      titulo: nome,
+      data_solicitacao: hojeISO(),
+    });
+    if (e) return aviso(`Não deu para criar o pedido: ${e}`);
+    aviso(`“${nome}” entrou na pauta sem card. Abra o card no Azure e cole o link aqui.`);
+  }
+
+  /**
+   * Colou o link numa linha que só tinha o nome: o card manda em tudo que é
+   * dele, inclusive no título — o nome provisório é substituído.
+   */
+  async function vincularCard(pedido, azureId) {
+    if (!podeEditar) return setMostraLogin(true);
+    const jaTem = pedidos.find((p) => p.azure_id === azureId);
+    if (jaTem) return aviso(`O card #${azureId} já está na pauta — “${jaTem.titulo}”.`);
+    try {
+      const { data } = (await supabase()?.auth.getSession()) || {};
+      const { ok, dados } = await chamaFuncao("azure-card", { id: azureId }, data?.session?.access_token);
+      if (!ok) return aviso(dados.erro || "Não consegui ler o card no Azure.");
+      if (dados.jaNaPauta) return aviso(`O card #${azureId} já está na pauta — “${dados.jaNaPauta.titulo}”.`);
+      const c = dados.card;
+      const antigo = pedido.titulo;
+      const { erro: e } = await salvarCampo(pedido.id, {
+        azure_id: c.azure_id,
+        titulo: c.titulo,
+        azure_state: c.azure_state,
+        azure_assigned_to: c.azure_assigned_to,
+        azure_changed_at: c.azure_changed_at,
+        data_solicitacao: c.data_solicitacao || pedido.data_solicitacao,
+        data_entrega: c.data_entrega,
+        pasta_codigo: c.pasta_codigo,
+        pasta_url: c.pasta_url,
+      });
+      if (e) return aviso(`Não deu para vincular: ${e}`);
+      aviso(`Card #${azureId} vinculado. “${antigo}” virou “${c.titulo}”.`);
+    } catch {
+      aviso("Não consegui falar com o Azure agora.");
+    }
+  }
+
   async function confirmaFoco(extras) {
     setSalvandoFoco(true);
     const { erro: e } = await criarPedido({ cliente_id: cfg.cliente.id, ...foco, tags: undefined, ...extras });
@@ -214,7 +259,8 @@ export default function Pauta() {
 
             <Grade
               pedidos={visiveis} cfg={cfg} podeEditar={podeEditar}
-              salvar={salvarCampo} remover={removerPedido} aoColar={aoColar} aviso={aviso}
+              salvar={salvarCampo} remover={removerPedido} aviso={aviso}
+              aoColar={aoColar} aoIniciar={iniciarPedido} aoVincular={vincularCard}
               ordem={ordem} aoOrdenar={aoOrdenar}
             />
           </section>

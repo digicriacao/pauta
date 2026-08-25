@@ -31,7 +31,7 @@ const preflight = (req: Request) =>
 /* ── Azure DevOps — o PAT só existe aqui dentro ─────────────────────────────────────────────── */
 const ORG = Deno.env.get("AZURE_ORG") ?? "digidevs";
 const PROJETO = Deno.env.get("AZURE_PROJECT") ?? "SQUAD PULSE";
-const CAMPO_ENTREGA = Deno.env.get("AZURE_CAMPO_ENTREGA") ?? "Microsoft.VSTS.Scheduling.DueDate";
+const CAMPO_ENTREGA = Deno.env.get("AZURE_CAMPO_ENTREGA") ?? "Microsoft.VSTS.Scheduling.TargetDate";
 const API = "7.1";
 
 function cabecalhos(): HeadersInit {
@@ -106,12 +106,19 @@ async function buscaCard(id: number) {
 }
 
 /** Ids alterados desde `desde` (ISO). Filtra o cliente por tag ou por título. */
-async function idsAlterados(desde: string, tagCliente: string): Promise<number[]> {
+async function idsAlterados(desde: string, cliente: string): Promise<number[]> {
   const modo = Deno.env.get("AZURE_FILTRO_CLIENTE") ?? "titulo";
+  // Três jeitos de dizer "este card é da Prudential":
+  //   campo  → um campo próprio do card (ex.: Campanha) — o mais confiável
+  //   tag    → as Tags do work item
+  //   titulo → o marcador [Prudential] no título, como no Pulse v1
+  const campoCliente = Deno.env.get("AZURE_CAMPO_CLIENTE") ?? "Custom.Campanha";
   const filtro =
-    modo === "tag"
-      ? `AND [System.Tags] CONTAINS '${tagCliente}'`
-      : `AND [System.Title] CONTAINS '[${tagCliente}]'`;
+    modo === "campo"
+      ? `AND [${campoCliente}] CONTAINS '${cliente}'`
+      : modo === "tag"
+      ? `AND [System.Tags] CONTAINS '${cliente}'`
+      : `AND [System.Title] CONTAINS '[${cliente}]'`;
   const wiql = `
     SELECT [System.Id] FROM WorkItems
     WHERE [System.TeamProject] = '${PROJETO}'

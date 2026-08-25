@@ -9,6 +9,7 @@
   --ink:#17141A; --ink-2:#4A434F; --muted:#6E6572; --faint:#9A929F;
   --accent:#EA0356; --accent-soft:#FFE8F0; --accent-ink:#EA0356;
   --ok:#059669; --warn:#D97706; --info:#2563EB; --fire:#EA580C; --none:#8C8494;
+  --alerta:#DC2626;
   --chip-a:12%; --chip-b:26%;
   --c1:#EA0356; --c2:#0891B2; --c3:#D97706; --c4:#2563EB; --c5:#059669; --c6:#7C3AED; --c7:#8C8494;
   --grid-line:#EDEBEF;
@@ -23,6 +24,7 @@
   --ink:#F2EFF2; --ink-2:#C9C2CD; --muted:#8E8494; --faint:#6A6272;
   --accent:#FF0066; --accent-soft:#3A001A; --accent-ink:#FF3D85;
   --ok:#34D399; --warn:#FBBF24; --info:#60A5FA; --fire:#FB923C; --none:#8C8494;
+  --alerta:#F87171;
   --chip-a:20%; --chip-b:46%;
   --c1:#F5487F; --c2:#1795AB; --c3:#BF8613; --c4:#5A90F0; --c5:#17A877; --c6:#9166E8; --c7:#8C8494;
   --grid-line:#26262D;
@@ -34,6 +36,7 @@
   --ink:#F2EFF2; --ink-2:#C9C2CD; --muted:#8E8494; --faint:#6A6272;
   --accent:#FF0066; --accent-soft:#3A001A; --accent-ink:#FF3D85;
   --ok:#34D399; --warn:#FBBF24; --info:#60A5FA; --fire:#FB923C; --none:#8C8494;
+  --alerta:#F87171;
   --chip-a:20%; --chip-b:46%;
   --c1:#F5487F; --c2:#1795AB; --c3:#BF8613; --c4:#5A90F0; --c5:#17A877; --c6:#9166E8; --c7:#8C8494;
   --grid-line:#26262D;
@@ -121,6 +124,9 @@ table.grade{border-collapse:separate;border-spacing:0;table-layout:fixed}
 @keyframes flash{0%{background:var(--accent-soft)}100%{background:transparent}}
 .grade tbody tr.novo td{background:var(--surface-3)}
 .grade tbody tr.novo:hover td{background:var(--surface-3)}
+.grade tbody tr.rascunho td{background:color-mix(in srgb, var(--alerta) 9%, var(--surface))}
+.grade tbody tr.rascunho:hover td{background:color-mix(in srgb, var(--alerta) 14%, var(--surface))}
+.grade tbody tr.rascunho td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
 .grade tbody tr.feito{opacity:.5}
 .grade tbody tr.feito:hover{opacity:.88}
 
@@ -144,6 +150,20 @@ td.pedido .ro{white-space:normal;line-height:1.3}
 input.paste{width:100%;height:42px;text-align:center;border:1px dashed var(--line-strong);background:transparent;border-radius:6px;padding:0 8px;font-size:12px;font-family:var(--mono)}
 input.paste::placeholder{color:var(--faint);opacity:.8;font-family:var(--sans);font-style:italic}
 input.paste:focus{border-style:solid;border-color:var(--accent)}
+input.paste.alerta{border-color:color-mix(in srgb, var(--alerta) 55%, var(--line-strong))}
+input.novo-pedido{width:100%;height:42px;border:1px dashed var(--line-strong);background:transparent;
+  border-radius:6px;padding:0 10px;font-size:12.5px;text-align:center;font-family:var(--sans)}
+input.novo-pedido::placeholder{color:var(--faint);opacity:.8;font-style:italic}
+input.novo-pedido:focus{border-style:solid;border-color:var(--accent)}
+.rasc{display:flex;align-items:center;justify-content:center;gap:7px;padding:0 8px;min-height:42px;flex-wrap:wrap}
+.rasc input.titulo{flex:1;min-width:90px;border:0;background:transparent;font-size:12.5px;color:var(--ink);
+  text-align:center;height:34px;border-radius:6px;padding:0 6px}
+.rasc input.titulo:hover:not(:disabled){background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--line-strong)}
+.abrir-card{flex:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;text-decoration:none;
+  border:1px solid color-mix(in srgb, var(--alerta) 45%, var(--line-strong));color:var(--alerta);
+  background:transparent;border-radius:20px;padding:3px 9px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.05em;text-transform:uppercase;font-weight:600;cursor:pointer}
+.abrir-card:hover{background:color-mix(in srgb, var(--alerta) 12%, transparent)}
 .badge-nocard{display:block;text-align:center;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);white-space:nowrap}
 
 .chipwrap{display:block;padding:0 6px}
