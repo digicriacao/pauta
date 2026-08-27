@@ -75,16 +75,54 @@ export const posRegua = (id) => {
   return i === -1 ? 99 : i;
 };
 
-/* ── Cancelados ─────────────────────────────────────────────────────────────
-   É a mesma tabela `pedidos`, filtrada pelo status marcado como cancelamento.
-   Por isso a linha "se autopreenche" ao mudar o status na home: é a mesma linha. */
-export const COLUNAS_CANCELADOS = [
-  { id: "data_solicitacao",    rotulo: "📅 Solicitação",         largura: 130, ord: "data_solicitacao", dirPadrao: "desc" },
-  { id: "azure_id",            rotulo: "Link Azure",             largura: 128 },
-  { id: "demandante_id",       rotulo: "Demandante",             largura: 150, ord: "demandante", dirPadrao: "asc" },
-  { id: "titulo",              rotulo: "Pedido",                 largura: 340 },
-  { id: "status_interno_id",   rotulo: "🟠 Interno",             largura: 180 },
-  { id: "motivo_cancelamento", rotulo: "Motivo do cancelamento", largura: 380 },
+/* ── Filas: Parados e Cancelados ────────────────────────────────────────────
+   As duas são a mesma tabela `pedidos`, filtrada pela marcação do status
+   interno. Por isso a linha "se autopreenche" ao trocar o status na home: é a
+   mesma linha, vista de outro ângulo. A única diferença entre as duas áreas é
+   qual marcação filtra e em que coluna o motivo é escrito. */
+const COLUNAS_FILA = [
+  { id: "data_solicitacao",  rotulo: "📅 Solicitação", largura: 130, ord: "data_solicitacao", dirPadrao: "desc" },
+  { id: "azure_id",          rotulo: "Link Azure",     largura: 128 },
+  { id: "demandante_id",     rotulo: "Demandante",     largura: 150, ord: "demandante", dirPadrao: "asc" },
+  { id: "titulo",            rotulo: "Pedido",         largura: 340 },
+  { id: "status_interno_id", rotulo: "🟠 Interno",     largura: 180 },
+];
+
+export const FILAS = {
+  parados: {
+    chave: "parados",
+    botao: "Parados",
+    marca: "pausa",                 // coluna booleana em status_internos
+    campoMotivo: "motivo_pausa",
+    rotuloMotivo: "Motivo da pausa",
+    dicaMotivo: "por que parou?",
+    cor: "#8C8494",
+    bolha: "cz",
+    singular: "parado",
+    plural: "parados",
+    vazio: "Nada parado. Um pedido chega aqui quando o status interno vira PARADO na pauta.",
+    classeLinha: "parada",
+  },
+  cancelados: {
+    chave: "cancelados",
+    botao: "Cancelados",
+    marca: "cancelamento",
+    campoMotivo: "motivo_cancelamento",
+    rotuloMotivo: "Motivo do cancelamento",
+    dicaMotivo: "por que foi cancelado?",
+    cor: "#DC2626",
+    bolha: "vm",
+    singular: "cancelado",
+    plural: "cancelados",
+    vazio: "Nada cancelado. Um pedido chega aqui quando o status interno vira CANCELADO na pauta.",
+    classeLinha: "cancelada",
+  },
+};
+
+/** As colunas de uma fila: as fixas mais a do motivo, que muda de nome. */
+export const colunasFila = (fila) => [
+  ...COLUNAS_FILA,
+  { id: fila.campoMotivo, rotulo: fila.rotuloMotivo, largura: 380 },
 ];
 
 export const LS_LARGURAS = "pauta.v2.larguras";

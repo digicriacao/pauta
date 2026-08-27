@@ -59,10 +59,13 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
   const recurso = cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to);
   // Pedido anotado à mão, ainda sem card no Azure: linha incompleta.
   const rascunho = !p.azure_id;
-  const cancelado = !!cfg.status.find((s) => s.id === p.status_interno_id)?.cancelamento;
+  // O status interno pode marcar a linha como parada ou cancelada — as duas
+  // saem do fluxo normal e ganham tratamento visual próprio.
+  const st = cfg.status.find((s) => s.id === p.status_interno_id);
+  const excecao = st?.cancelamento ? "cancelada" : st?.pausa ? "parada" : "";
 
   return (
-    <tr className={`${p.entregue ? "feito" : ""} ${rascunho ? "rascunho" : ""} ${cancelado ? "cancelada" : ""}`}>
+    <tr className={`${p.entregue ? "feito" : ""} ${rascunho ? "rascunho" : ""} ${excecao}`}>
       <td>
         <CampoData valor={p.data_solicitacao} desabilitado={dis}
           aoMudar={(v) => salvar(p.id, { data_solicitacao: v || null })} />
@@ -181,7 +184,7 @@ export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoCol
 
   async function marcar(p) {
     const stEntrega = cfg.status.find((s) => s.entrega);
-    const stProducao = cfg.status.find((s) => !s.entrega && !s.cancelamento) || null;
+    const stProducao = cfg.status.find((s) => !s.entrega && !s.cancelamento && !s.pausa) || null;
     const virou = !p.entregue;
     await salvar(p.id, {
       entregue: virou,

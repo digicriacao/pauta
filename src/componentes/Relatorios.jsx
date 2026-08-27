@@ -121,11 +121,11 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
       );
       return;
     }
-    const cab = ["Solicitação","Card","Pasta","Demandante","Pedido","Artes","Esforço","Tipo","Entrega","Azure","Interno","Entrega combinada","Entregue","Recurso","Obs","Motivo do cancelamento"];
+    const cab = ["Solicitação","Card","Pasta","Demandante","Pedido","Artes","Esforço","Tipo","Entrega","Azure","Interno","Entrega combinada","Entregue","Recurso","Obs","Motivo da pausa","Motivo do cancelamento"];
     const linha = (p) => [
       fmtBRL(p.data_solicitacao), "#" + p.azure_id, p.pasta_codigo || "",
       nomeDem(p), p.titulo, p.qtd_artes ?? 1, p.esforco ?? "", nomeTipo(p), fmtBRL(p.data_entrega), p.azure_state, nomeSt(p),
-      p.entrega_em || "", p.entregue ? "sim" : "não", nomeRec(p), p.observacao || "", p.motivo_cancelamento || "",
+      p.entrega_em || "", p.entregue ? "sim" : "não", nomeRec(p), p.observacao || "", p.motivo_pausa || "", p.motivo_cancelamento || "",
     ];
     const csv = "﻿" + [cab, ...base.map(linha)].map((l) => l.map(csvCampo).join(";")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));

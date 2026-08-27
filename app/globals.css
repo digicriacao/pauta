@@ -380,7 +380,8 @@ button.data.vazio{color:var(--faint)}
 .bolha.am{--cor:var(--warn)}
 .bolha.az{--cor:var(--info)}
 .bolha.vm{--cor:var(--alerta)}
-.bolha.zero{--cor:var(--none);opacity:.7}
+.bolha.cz{--cor:var(--none)}
+.bolha.zero{--cor:var(--none);opacity:.45;font-weight:500}
 
 /* Botãozinho de trocar o link de uma régua. */
 .mini{border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:12px;
@@ -397,5 +398,11 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .grade tbody tr.cancelada td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
 .grade tbody tr.cancelada .pedido .ro{text-decoration:line-through;color:var(--muted)}
 
-/* Cancelado ainda sem motivo escrito: é o que a bolinha do botão conta. */
+/* Linha parada: sai do fluxo sem sumir, mas sem o alarme do cancelamento. */
+.grade tbody tr.parada td{background:color-mix(in srgb, var(--none) 9%, var(--surface))}
+.grade tbody tr.parada:hover td{background:color-mix(in srgb, var(--none) 15%, var(--surface))}
+.grade tbody tr.parada td:first-child{box-shadow:inset 3px 0 0 var(--none)}
+.grade tbody tr.parada .pedido .ro{color:var(--muted)}
+
+/* Parado ou cancelado ainda sem motivo escrito: é o que a bolinha conta. */
 .grade tbody tr.pendente td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}

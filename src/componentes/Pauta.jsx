@@ -5,7 +5,7 @@ import { useDados, useReguas, useSessao } from "@/lib/dados";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
 import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
-import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado } from "@/lib/constantes";
+import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado, FILAS } from "@/lib/constantes";
 import Cabecalho from "./Cabecalho";
 import Resumo from "./Resumo";
 import Grade from "./Grade";
@@ -14,7 +14,7 @@ import Login from "./Login";
 import Admin from "./Admin";
 import Relatorios from "./Relatorios";
 import Reguas from "./Reguas";
-import Cancelados from "./Cancelados";
+import Fila from "./Fila";
 
 export default function Pauta() {
   const { cfg, pedidos, carregando, erro, recarregar, salvarCampo, criarPedido, removerPedido } = useDados();
@@ -145,19 +145,23 @@ export default function Pauta() {
     [doMes, filtros, cfg, nomeRec]
   );
 
-  /* Cancelados não olha só o mês: é a lista inteira do que foi cancelado. */
-  const idsCancel = useMemo(
-    () => new Set(cfg.status.filter((s) => s.cancelamento).map((s) => s.id)),
-    [cfg.status]
-  );
-  const cancelados = useMemo(
-    () => pedidos.filter((p) => idsCancel.has(p.status_interno_id)),
-    [pedidos, idsCancel]
-  );
-  const semMotivo = useMemo(
-    () => cancelados.filter((p) => !(p.motivo_cancelamento || "").trim()).length,
-    [cancelados]
-  );
+  /**
+   * Parados e Cancelados não olham só o mês: são a lista inteira. Um pedido
+   * parado em junho continua parado hoje — esconder por causa da aba do mês
+   * seria justamente perder de vista o que não pode ser perdido de vista.
+   */
+  const filas = useMemo(() => {
+    const monta = (fila) => {
+      const ids = new Set(cfg.status.filter((s) => s[fila.marca]).map((s) => s.id));
+      const itens = pedidos.filter((p) => ids.has(p.status_interno_id));
+      return {
+        fila,
+        itens,
+        semMotivo: itens.filter((p) => !(p[fila.campoMotivo] || "").trim()).length,
+      };
+    };
+    return { parados: monta(FILAS.parados), cancelados: monta(FILAS.cancelados) };
+  }, [pedidos, cfg.status]);
   const contaRegua = useCallback(
     (st) => reguas.filter((r) => r.status === st).length,
     [reguas]
@@ -293,13 +297,24 @@ export default function Pauta() {
                 <span className={`bolha az ${contaRegua("producao") ? "" : "zero"}`} title="Em produção">{contaRegua("producao")}</span>
               </button>
 
-              <button
-                className={`abtn ${area === "cancelados" ? "on" : ""}`}
-                onClick={() => setArea(area === "cancelados" ? "pauta" : "cancelados")}
-              >
-                Cancelados
-                <span className={`bolha vm ${semMotivo ? "" : "zero"}`} title="Cancelados sem motivo preenchido">{semMotivo}</span>
-              </button>
+              {["parados", "cancelados"].map((k) => {
+                const { fila, semMotivo } = filas[k];
+                return (
+                  <button
+                    key={k}
+                    className={`abtn ${area === k ? "on" : ""}`}
+                    onClick={() => setArea(area === k ? "pauta" : k)}
+                  >
+                    {fila.botao}
+                    <span
+                      className={`bolha ${fila.bolha} ${semMotivo ? "" : "zero"}`}
+                      title={`${fila.botao} sem motivo preenchido`}
+                    >
+                      {semMotivo}
+                    </span>
+                  </button>
+                );
+              })}
 
               <span className="spacer" />
               <span className="mono" style={{ color: "var(--muted)", fontSize: 12 }}>
@@ -307,8 +322,8 @@ export default function Pauta() {
                   ? "carregando…"
                   : area === "reguas"
                   ? `${reguas.length} ${reguas.length === 1 ? "régua" : "réguas"}`
-                  : area === "cancelados"
-                  ? `${cancelados.length} ${cancelados.length === 1 ? "cancelado" : "cancelados"}`
+                  : filas[area]
+                  ? `${filas[area].itens.length} ${filas[area].itens.length === 1 ? filas[area].fila.singular : filas[area].fila.plural}`
                   : visiveis.length === doMes.length
                   ? `${doMes.length} pedidos`
                   : `${visiveis.length} de ${doMes.length}`}
@@ -331,10 +346,10 @@ export default function Pauta() {
               />
             )}
 
-            {area === "cancelados" && (
-              <Cancelados
-                pedidos={cancelados} cfg={cfg} podeEditar={podeEditar}
-                salvar={salvarCampo} aviso={aviso}
+            {filas[area] && (
+              <Fila
+                fila={filas[area].fila} pedidos={filas[area].itens}
+                cfg={cfg} podeEditar={podeEditar} salvar={salvarCampo} aviso={aviso}
               />
             )}
           </section>
