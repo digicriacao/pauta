@@ -14,7 +14,7 @@ const PROJETO = process.env.NEXT_PUBLIC_AZURE_PROJECT || "SQUAD PULSE";
  * │ Deixe vazio para não preencher nada além do título.                  │
  * └───────────────────────────────────────────────────────────────────────┘
  */
-const TIPO_CARD = "Task";
+const TIPO_CARD = "Criação";
 const CAMPO_CLIENTE = "";
 
 export function urlCard(id) {
