@@ -406,3 +406,74 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 
 /* Parado ou cancelado ainda sem motivo escrito: é o que a bolinha conta. */
 .grade tbody tr.pendente td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
+
+/* ============================================================================
+   Relatórios — blocos, situação, empilhadas e curva acumulada
+   Classes novas e próprias; nenhuma reaproveita seletor existente.
+   ============================================================================ */
+
+.hlist{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+.nada{color:var(--faint);font-size:13px;margin:14px 0 4px}
+.exp-rot{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* filtro de sim/não na barra de relatórios */
+.tog{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid var(--line-strong);
+  background:var(--surface);border-radius:8px;font-size:12.5px;color:var(--ink-2);cursor:pointer;user-select:none}
+.tog:hover{border-color:var(--accent)}
+.tog input{accent-color:var(--accent);cursor:pointer;margin:0}
+.tog:has(input:not(:checked)){color:var(--faint);text-decoration:line-through}
+
+/* escolha de blocos: o que aparece na tela é o que sai no arquivo */
+.blocos{position:relative}
+.blocos>summary{list-style:none;cursor:pointer}
+.blocos>summary::-webkit-details-marker{display:none}
+.blocos>summary b{font-size:11px;color:var(--muted)}
+.blocos[open]>summary{border-color:var(--accent);color:var(--accent-ink)}
+.blocos[open]>summary b{color:var(--accent-ink)}
+.blocos-pop{position:absolute;z-index:50;top:calc(100% + 6px);left:0;width:min(430px,88vw);
+  background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--radius);
+  box-shadow:0 16px 44px rgba(8,8,10,.20);padding:12px 14px 14px;max-height:min(70vh,540px);overflow:auto}
+.bl-topo{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-size:11.5px;color:var(--faint);padding-bottom:8px;border-bottom:1px solid var(--line)}
+.bl-acoes{display:flex;gap:8px;flex:none}
+.bl-grupo{padding-top:10px}
+.bl-grupo h4{margin:0 0 5px;font-family:var(--mono);font-size:10px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted);font-weight:500}
+.bl-item{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:7px;font-size:13px;cursor:pointer}
+.bl-item:hover{background:var(--surface-3)}
+.bl-item input{accent-color:var(--accent);cursor:pointer;margin:0}
+.bl-item em{margin-left:auto;font-style:normal;font-size:10.5px;color:var(--faint)}
+
+.kpis-rel{grid-template-columns:repeat(5,1fr)}
+
+/* situação do recorte: uma barra, fatias separadas por 2px de superfície */
+.sitbar{display:flex;gap:2px;height:26px;margin-top:14px;border-radius:8px;overflow:hidden}
+.sitseg{display:block;min-width:3px;cursor:default}
+.sitlist{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:12.5px;color:var(--ink-2)}
+.sititem{display:inline-flex;align-items:center;gap:6px}
+.sititem i{width:9px;height:9px;border-radius:3px;flex:none}
+.sititem b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.sititem em{font-style:normal;color:var(--faint)}
+
+/* barras empilhadas: mesmo respiro de 2px entre as duas séries */
+.pilha{display:flex;gap:2px;height:100%;border-radius:4px;overflow:hidden}
+.pilha i{display:block;height:100%;min-width:3px}
+
+/* curva acumulada */
+.gr-linha{width:100%;height:auto;display:block;margin-top:6px;overflow:visible}
+.gr-grid{stroke:var(--grid-line);stroke-width:1}
+.gr-txt{fill:var(--faint);font-family:var(--mono);font-size:11px}
+.gr-area{fill:color-mix(in srgb, var(--accent) 12%, transparent);stroke:none}
+.gr-prev{fill:none;stroke:var(--line-strong);stroke-width:2;stroke-dasharray:5 4;stroke-linecap:round}
+.gr-feito{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+
+.res td.sem-motivo{color:var(--alerta);font-style:italic}
+
+@media (max-width:1200px){
+  .kpis-rel{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:760px){
+  .charts{grid-template-columns:1fr}
+  .kpis-rel{grid-template-columns:repeat(2,1fr)}
+  .blocos-pop{left:auto;right:0}
+}

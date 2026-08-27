@@ -125,6 +125,31 @@ export const colunasFila = (fila) => [
   { id: fila.campoMotivo, rotulo: fila.rotuloMotivo, largura: 380 },
 ];
 
+/* ── Relatórios ─────────────────────────────────────────────────────────────
+   Cada bloco é uma peça do relatório que a pessoa liga e desliga. O que está
+   ligado é o que aparece na tela E o que sai na exportação — uma escolha só,
+   para o arquivo nunca discordar do que estava sendo visto. */
+export const BLOCOS_RELATORIO = [
+  { id: "kpis",       grupo: "Topo",     nome: "Indicadores" },
+  { id: "situacao",   grupo: "Gráficos", nome: "Situação do recorte" },
+  { id: "dia",        grupo: "Gráficos", nome: "Entregas por dia" },
+  { id: "acumulado",  grupo: "Gráficos", nome: "Curva acumulada" },
+  { id: "recurso",    grupo: "Gráficos", nome: "Carga por recurso" },
+  { id: "artesRec",   grupo: "Gráficos", nome: "Artes por recurso" },
+  { id: "esforcoRec", grupo: "Gráficos", nome: "Esforço por recurso" },
+  { id: "demandante", grupo: "Gráficos", nome: "Pedidos por demandante" },
+  { id: "tipo",       grupo: "Gráficos", nome: "Distribuição por tipo" },
+  { id: "status",     grupo: "Gráficos", nome: "Status interno" },
+  { id: "atrito",     grupo: "Gráficos", nome: "Parados e cancelados por demandante" },
+  { id: "tabRecurso", grupo: "Tabelas",  nome: "Resumo por recurso" },
+  { id: "tabParados", grupo: "Tabelas",  nome: "Lista de parados" },
+  { id: "tabCancel",  grupo: "Tabelas",  nome: "Lista de cancelados" },
+  { id: "tabDetalhe", grupo: "Tabelas",  nome: "Planilha detalhada", soExport: true },
+];
+
+export const GRUPOS_BLOCOS = ["Topo", "Gráficos", "Tabelas"];
+
+export const LS_BLOCOS = "pauta.v2.blocos";
 export const LS_LARGURAS = "pauta.v2.larguras";
 export const LS_ORDEM = "pauta.v2.ordem";
 
