@@ -353,3 +353,49 @@ footer b{color:var(--muted);font-weight:600}
   .cli-lista li{grid-template-columns:1fr;gap:6px}
   .cli-hora{grid-row:auto}
 }
+
+/* ============================================================================
+   Réguas, Cancelados e o campo de data curto
+   Nomes de classe novos e próprios — nada aqui reaproveita seletor existente.
+   ============================================================================ */
+
+/* Data sem ano: célula parada é botão de texto; o input nativo só no clique. */
+button.data{width:100%;height:42px;border:0;background:transparent;padding:0 8px;border-radius:6px;
+  font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink);
+  cursor:pointer;text-align:center}
+button.data:hover:not(:disabled){background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--line-strong)}
+button.data:disabled{cursor:default;opacity:1}
+button.data.vazio{color:var(--faint)}
+
+/* Botões de área na barra de filtros, com as bolinhas de contagem. */
+.abtn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px;border:1px solid var(--line-strong);
+  background:var(--surface);border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink-2);white-space:nowrap}
+.abtn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.abtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.bolha{--cor:var(--none);min-width:20px;height:19px;padding:0 5px;border-radius:10px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums;
+  background:color-mix(in srgb, var(--cor) 20%, var(--surface));color:var(--cor);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--cor) 42%, transparent)}
+.bolha.am{--cor:var(--warn)}
+.bolha.az{--cor:var(--info)}
+.bolha.vm{--cor:var(--alerta)}
+.bolha.zero{--cor:var(--none);opacity:.7}
+
+/* Botãozinho de trocar o link de uma régua. */
+.mini{border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:12px;
+  padding:2px 5px;border-radius:5px;line-height:1;flex:none}
+.mini:hover{color:var(--accent-ink);background:var(--surface-3)}
+
+/* Chip que não se escolhe — o status fixo da área de Cancelados. */
+span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%;height:26px;border-radius:20px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;padding:0 8px;font-weight:600}
+
+/* Linha cancelada na pauta: some do fluxo sem sumir da tela. */
+.grade tbody tr.cancelada td{background:color-mix(in srgb, var(--alerta) 7%, var(--surface))}
+.grade tbody tr.cancelada:hover td{background:color-mix(in srgb, var(--alerta) 12%, var(--surface))}
+.grade tbody tr.cancelada td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
+.grade tbody tr.cancelada .pedido .ro{text-decoration:line-through;color:var(--muted)}
+
+/* Cancelado ainda sem motivo escrito: é o que a bolinha do botão conta. */
+.grade tbody tr.pendente td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
