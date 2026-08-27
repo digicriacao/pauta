@@ -128,6 +128,89 @@ export function useDados() {
   return { cfg, setCfg, pedidos, carregando, erro, recarregar: carregar, salvarCampo, criarPedido, removerPedido };
 }
 
+/**
+ * Réguas. Tabela própria, fora da pauta: nada aqui vem do Azure, então não há
+ * sync nem conflito — o que a pessoa escreve é o que fica.
+ */
+export function useReguas(clienteId) {
+  const [reguas, setReguas] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+
+  const carregar = useCallback(async () => {
+    const sb = supabase();
+    if (!sb || !clienteId) return setCarregando(false);
+    const { data } = await sb
+      .from("reguas").select("*").eq("cliente_id", clienteId)
+      .order("ordem").order("criado_em");
+    setReguas(data || []);
+    setCarregando(false);
+  }, [clienteId]);
+
+  useEffect(() => {
+    carregar();
+    const sb = supabase();
+    if (!sb || !clienteId) return;
+    const canal = sb
+      .channel("reguas-ao-vivo")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reguas" }, (ev) => {
+        setReguas((atual) => {
+          if (ev.eventType === "DELETE") return atual.filter((r) => r.id !== ev.old.id);
+          const i = atual.findIndex((r) => r.id === ev.new.id);
+          if (i === -1) return [...atual, ev.new];
+          const copia = atual.slice();
+          copia[i] = { ...copia[i], ...ev.new };
+          return copia;
+        });
+      })
+      .subscribe();
+    return () => sb.removeChannel(canal);
+  }, [carregar, clienteId]);
+
+  const salvarRegua = useCallback(async (id, campos) => {
+    const sb = supabase();
+    if (!sb) return { erro: "Sem conexão." };
+    let anterior;
+    setReguas((atual) =>
+      atual.map((r) => {
+        if (r.id !== id) return r;
+        anterior = r;
+        return { ...r, ...campos };
+      })
+    );
+    const { error } = await sb.from("reguas").update(campos).eq("id", id);
+    if (error) {
+      if (anterior) setReguas((atual) => atual.map((r) => (r.id === id ? anterior : r)));
+      return { erro: error.message };
+    }
+    return {};
+  }, []);
+
+  const criarRegua = useCallback(async (nome) => {
+    const sb = supabase();
+    if (!sb) return { erro: "Sem conexão." };
+    const { data, error } = await sb
+      .from("reguas").insert({ cliente_id: clienteId, nome, status: "radar" }).select().single();
+    if (error) return { erro: error.message };
+    setReguas((atual) => (atual.some((r) => r.id === data.id) ? atual : [...atual, data]));
+    return { regua: data };
+  }, [clienteId]);
+
+  const removerRegua = useCallback(async (id) => {
+    const sb = supabase();
+    if (!sb) return { erro: "Sem conexão." };
+    const copia = reguas;
+    setReguas((atual) => atual.filter((r) => r.id !== id));
+    const { error } = await sb.from("reguas").delete().eq("id", id);
+    if (error) {
+      setReguas(copia);
+      return { erro: error.message };
+    }
+    return {};
+  }, [reguas]);
+
+  return { reguas, carregando, salvarRegua, criarRegua, removerRegua };
+}
+
 /** Sessão + papel. O botão "Só leitura" vira "Editando" só para editor/admin. */
 export function useSessao() {
   const [perfil, setPerfil] = useState(null);

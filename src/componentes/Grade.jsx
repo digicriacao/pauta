@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { COLUNAS, LS_LARGURAS, MAPA_ESTADO, corEstado } from "@/lib/constantes";
-import { fmtBR, paraInputLocal, deInputLocal, hojeISO } from "@/lib/formato";
+import { fmtBR, deInputLocal, hojeISO } from "@/lib/formato";
 import { urlCard, urlNovoCard, idDoLink } from "@/lib/azure-cliente";
+import { useLarguras } from "@/lib/larguras";
+import { Cabecalhos, Colunas, CampoData } from "./GradeBase";
 
 const mix = (cor, pct) => `color-mix(in srgb, ${cor} ${pct}, var(--surface))`;
 
@@ -57,15 +59,13 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
   const recurso = cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to);
   // Pedido anotado à mão, ainda sem card no Azure: linha incompleta.
   const rascunho = !p.azure_id;
+  const cancelado = !!cfg.status.find((s) => s.id === p.status_interno_id)?.cancelamento;
 
   return (
-    <tr className={`${p.entregue ? "feito" : ""} ${rascunho ? "rascunho" : ""}`}>
+    <tr className={`${p.entregue ? "feito" : ""} ${rascunho ? "rascunho" : ""} ${cancelado ? "cancelada" : ""}`}>
       <td>
-        <input
-          className={`cell${p.data_solicitacao ? "" : " vazio"}`} type="date" disabled={dis}
-          value={p.data_solicitacao || ""}
-          onChange={(e) => salvar(p.id, { data_solicitacao: e.target.value || null })}
-        />
+        <CampoData valor={p.data_solicitacao} desabilitado={dis}
+          aoMudar={(v) => salvar(p.id, { data_solicitacao: v || null })} />
       </td>
       <td>
         {rascunho
@@ -123,6 +123,11 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
           }} />
       </td>
       <td>
+        {p.esforco === null || p.esforco === undefined
+          ? <div className="ro empty">—</div>
+          : <div className="ro mono" title="Esforço registrado no card">{p.esforco}</div>}
+      </td>
+      <td>
         <Chip valor={p.tipo_id} opcoes={cfg.tipos} desabilitado={dis}
           aoMudar={(v) => salvar(p.id, { tipo_id: v })} />
       </td>
@@ -144,9 +149,8 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
           }} />
       </td>
       <td>
-        <input className={`cell${p.entrega_em ? "" : " vazio"}`} type="datetime-local" disabled={dis}
-          value={paraInputLocal(p.entrega_em)}
-          onChange={(e) => salvar(p.id, { entrega_em: deInputLocal(e.target.value) })} />
+        <CampoData hora valor={p.entrega_em} desabilitado={dis}
+          aoMudar={(v) => salvar(p.id, { entrega_em: deInputLocal(v) })} />
       </td>
       <td>
         <button className={`chk ${p.entregue ? "on" : ""}`} disabled={dis}
@@ -172,48 +176,12 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
 }
 
 export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoColar, aoIniciar, aoVincular, aviso, ordem, aoOrdenar }) {
-  const [larguras, setLarguras] = useState({});
-  const arraste = useRef(null);
+  const { larg, pegaBorda } = useLarguras(LS_LARGURAS);
   const [nomeNovo, setNomeNovo] = useState("");
-
-  useEffect(() => {
-    try { setLarguras(JSON.parse(localStorage.getItem(LS_LARGURAS) || "{}") || {}); } catch {}
-  }, []);
-
-  const larg = useCallback((c) => larguras[c.id] || c.largura, [larguras]);
-
-  useEffect(() => {
-    const move = (e) => {
-      if (!arraste.current) return;
-      const { id, x0, w0 } = arraste.current;
-      setLarguras((l) => ({ ...l, [id]: Math.max(56, w0 + (e.clientX - x0)) }));
-    };
-    const solta = () => {
-      if (!arraste.current) return;
-      arraste.current = null;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      setLarguras((l) => {
-        try { localStorage.setItem(LS_LARGURAS, JSON.stringify(l)); } catch {}
-        return l;
-      });
-    };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", solta);
-    return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", solta); };
-  }, []);
-
-  function pegaBorda(e, c) {
-    e.preventDefault();
-    e.stopPropagation();
-    arraste.current = { id: c.id, x0: e.clientX, w0: larg(c) };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }
 
   async function marcar(p) {
     const stEntrega = cfg.status.find((s) => s.entrega);
-    const stProducao = cfg.status.find((s) => !s.entrega) || null;
+    const stProducao = cfg.status.find((s) => !s.entrega && !s.cancelamento) || null;
     const virou = !p.entregue;
     await salvar(p.id, {
       entregue: virou,
@@ -225,36 +193,13 @@ export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoCol
 
   return (
     <div className="gridwrap">
-      <table className="grade" style={{ minWidth: total }}>
-        <colgroup>
-          {COLUNAS.map((c) => <col key={c.id} style={{ width: larg(c) }} />)}
-        </colgroup>
-        <thead>
-          <tr>
-            {COLUNAS.map((c, i) => {
-              const ativa = c.ord && ordem.campo === c.ord;
-              return (
-                <th
-                  key={c.id}
-                  className={`${c.dono === "azure" ? "az" : ""} ${c.ord ? "ord" : ""}`}
-                  aria-sort={ativa ? (ordem.dir === "asc" ? "ascending" : "descending") : undefined}
-                  title={c.ord ? "Clique para ordenar por esta coluna" : undefined}
-                  onClick={() => c.ord && aoOrdenar(c)}
-                >
-                  {c.rotulo}
-                  {ativa && <span className="seta">{ordem.dir === "asc" ? "▲" : "▼"}</span>}
-                  {i < COLUNAS.length - 1 && (
-                    <span className="rz" onMouseDown={(e) => pegaBorda(e, c)} />
-                  )}
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
+      <table className="grade" style={{ minWidth: total, width: "100%" }}>
+        <Colunas colunas={COLUNAS} larg={larg} />
+        <Cabecalhos colunas={COLUNAS} larg={larg} pegaBorda={pegaBorda} ordem={ordem} aoOrdenar={aoOrdenar} />
         <tbody>
           {/* linha nova, sempre no topo: é onde se cola o link do card */}
           <tr className="novo">
-            <td><input className="cell" type="date" defaultValue={hojeISO()} disabled /></td>
+            <td><span className="ro mono">{fmtBR(hojeISO())}</span></td>
             <td><ColarCard desabilitado={!podeEditar} aoColar={aoColar} /></td>
             {COLUNAS.slice(2).map((c) =>
               c.id === "titulo" ? (

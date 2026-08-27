@@ -31,9 +31,23 @@ export function mesesDoAno(mesAtual, antes = 4, depois = 1) {
   return saida;
 }
 
-/** datetime-local <-> timestamptz */
-export const paraInputLocal = (ts) => (ts ? String(ts).replace(" ", "T").slice(0, 16) : "");
+/** datetime-local <-> timestamptz, sempre no fuso de quem está olhando.
+ *  Antes isto fatiava o texto cru e mostrava a hora em UTC — três horas à
+ *  frente do que a pessoa tinha digitado. */
+export const paraInputLocal = (ts) => {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 export const deInputLocal = (v) => (v ? new Date(v).toISOString() : null);
+
+/** '2026-06-24T15:30' -> '24/06 15:30'. Sem ano: a aba do mês já diz qual é. */
+export const fmtDataHora = (ts) => {
+  const v = paraInputLocal(ts);
+  return v ? `${v.slice(8, 10)}/${v.slice(5, 7)} ${v.slice(11, 16)}` : "";
+};
 
 export const csvCampo = (v) => {
   const t = String(v ?? "");
