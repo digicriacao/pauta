@@ -1,4 +1,5 @@
 import { fmtBR, fmtBRL, diffDias } from "@/lib/formato";
+import { nomeCurto } from "@/lib/recursos";
 
 /**
  * Todo o cálculo dos relatórios em um lugar só, longe do JSX.
@@ -30,8 +31,7 @@ export function topN(dados, n = 7) {
 export function nomes(cfg) {
   return {
     cli: (p) => p.campanha || "",
-    rec: (p) =>
-      cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to)?.nome_pauta || p.azure_assigned_to || "",
+    rec: (p) => nomeCurto(cfg.recursos, p.azure_assigned_to),
     dem: (p) => cfg.demandantes.find((d) => d.id === p.demandante_id)?.nome || "",
     tipo: (p) => cfg.tipos.find((t) => t.id === p.tipo_id)?.nome || "",
     st: (p) => cfg.status.find((s) => s.id === p.status_interno_id)?.nome || "",

@@ -2,10 +2,7 @@
 
 import { useMemo } from "react";
 import { hojeISO } from "@/lib/formato";
-
-/** "Vinícius" e "vinicius" são a mesma pessoa. */
-const chave = (t) =>
-  String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+import { achaRecurso } from "@/lib/recursos";
 
 /** Entrega marcada para hoje — pela hora combinada, ou pela data do card. */
 function ehDeHoje(p, hoje) {
@@ -30,11 +27,7 @@ export default function Medidor({ pedidos, cfg }) {
     const escolhidos = (cfg.recursos || []).filter((r) => r.medidor);
 
     return escolhidos.map((r) => {
-      const az = chave(r.nome_azure);
-      const meus = doDia.filter((p) => {
-        const quem = chave(p.azure_assigned_to);
-        return quem && az && (quem.includes(az) || az.includes(quem));
-      });
+      const meus = doDia.filter((p) => achaRecurso(escolhidos, p.azure_assigned_to)?.id === r.id);
       return {
         nome: r.nome_pauta || r.nome_azure,
         esforco: meus.reduce((s, p) => s + (Number(p.esforco) || 0), 0),

@@ -5,6 +5,7 @@ import { COLUNAS, LS_LARGURAS, MAPA_ESTADO, corEstado } from "@/lib/constantes";
 import { fmtBR, deInputLocal, hojeISO } from "@/lib/formato";
 import { urlCard, urlNovoCard, idDoLink } from "@/lib/azure-cliente";
 import { useLarguras } from "@/lib/larguras";
+import { nomeCurto } from "@/lib/recursos";
 import { Cabecalhos, Colunas, CampoData, CampoTexto } from "./GradeBase";
 
 const mix = (cor, pct) => `color-mix(in srgb, ${cor} ${pct}, var(--surface))`;
@@ -56,7 +57,7 @@ function Chip({ valor, opcoes, aoMudar, desabilitado }) {
 function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
   const dis = !podeEditar;
   const estado = MAPA_ESTADO[p.azure_state] || (p.azure_state ? p.azure_state.toUpperCase() : "");
-  const recurso = cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to);
+  const recurso = nomeCurto(cfg.recursos, p.azure_assigned_to);
   // Pedido anotado à mão, ainda sem card no Azure: linha incompleta.
   const rascunho = !p.azure_id;
   // O status interno pode marcar a linha como parada ou cancelada — as duas
@@ -171,7 +172,7 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
       </td>
       <td>
         {p.azure_assigned_to
-          ? <div className="ro" title={`Azure: ${p.azure_assigned_to}`}>{recurso?.nome_pauta || p.azure_assigned_to}</div>
+          ? <div className="ro" title={`Azure: ${p.azure_assigned_to}`}>{recurso}</div>
           : <div className="ro empty">—</div>}
       </td>
       <td>

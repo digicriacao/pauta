@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDados, useReguas, useSessao, useConfronto } from "@/lib/dados";
 import { usePresenca } from "@/lib/presenca";
+import { nomeCurto } from "@/lib/recursos";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
 import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
@@ -97,7 +98,7 @@ export default function Pauta() {
   );
 
   const nomeRec = useCallback(
-    (p) => cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to)?.nome_pauta || p.azure_assigned_to || "",
+    (p) => nomeCurto(cfg.recursos, p.azure_assigned_to),
     [cfg.recursos]
   );
 
