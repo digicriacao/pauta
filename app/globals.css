@@ -409,6 +409,24 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .grade tbody tr.parada td:first-child{box-shadow:inset 3px 0 0 var(--none)}
 .grade tbody tr.parada .pedido .ro{color:var(--muted)}
 
+/* Texto apagado, como no ENVIADO: quem parou não compete por atenção com quem
+   está andando. A opacidade cai no conteúdo da célula, não na linha inteira —
+   assim o cinza do fundo e a faixa da lateral continuam inteiros, e é só o
+   texto que recua. Passar o mouse traz de volta, para a linha continuar
+   legível na hora de ler o motivo. */
+.grade tbody tr.parada td > *,
+.grade tbody tr.cancelada td > *{opacity:.5}
+.grade tbody tr.parada:hover td > *,
+.grade tbody tr.cancelada:hover td > *{opacity:.88}
+
+/* Linha que já está apagada por ser ENTREGUE não apaga duas vezes: as duas
+   opacidades se multiplicariam e o texto sumiria de vez. A da linha inteira
+   basta. */
+.grade tbody tr.feito.parada td > *,
+.grade tbody tr.feito.cancelada td > *,
+.grade tbody tr.feito.parada:hover td > *,
+.grade tbody tr.feito.cancelada:hover td > *{opacity:1}
+
 /* Fura-fila: rosa da casa, mais forte que o cinza das exceções. Vem depois
    delas na folha justamente para vencer quando uma linha é as duas coisas. */
 .grade tbody tr.fura td{background:color-mix(in srgb, var(--accent) 13%, var(--surface))}
