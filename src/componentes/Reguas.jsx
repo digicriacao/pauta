@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { COLUNAS_REGUAS, LS_LARGURAS, STATUS_REGUA, corRegua, posRegua } from "@/lib/constantes";
 import { nomeDoLink, comEsquema } from "@/lib/links";
 import { useLarguras } from "@/lib/larguras";
-import { Cabecalhos, Colunas } from "./GradeBase";
+import { Cabecalhos, Colunas, CampoTexto } from "./GradeBase";
 
 const mix = (cor, pct) => `color-mix(in srgb, ${cor} ${pct}, var(--surface))`;
 
@@ -125,20 +125,12 @@ export default function Reguas({ reguas, clientes = [], podeEditar, salvar, cria
               <td>
                 {/* Régua não tem card: o cliente é escrito à mão, com sugestão
                     dos nomes que já existem na pauta. */}
-                <input className="cell" type="text" placeholder="cliente" disabled={dis}
-                  list="clientes-pauta" defaultValue={r.cliente || ""} title={r.cliente || ""}
-                  onBlur={(e) => {
-                    const v = e.target.value.trim();
-                    if (v !== (r.cliente || "")) guarda(() => salvar(r.id, { cliente: v || null }), "salvar o cliente");
-                  }} />
+                <CampoTexto valor={r.cliente} desabilitado={dis} placeholder="cliente" lista="clientes-pauta"
+                  aoSalvar={(v) => guarda(() => salvar(r.id, { cliente: v }), "salvar o cliente")} />
               </td>
               <td>
-                <input className="cell" type="text" placeholder="nome da régua" disabled={dis}
-                  defaultValue={r.nome || ""} title={r.nome || ""}
-                  onBlur={(e) => {
-                    const v = e.target.value.trim();
-                    if (v !== (r.nome || "")) guarda(() => salvar(r.id, { nome: v || null }), "salvar");
-                  }} />
+                <CampoTexto valor={r.nome} desabilitado={dis} placeholder="nome da régua"
+                  aoSalvar={(v) => guarda(() => salvar(r.id, { nome: v }), "salvar")} />
               </td>
               <td>
                 <CampoLink valor={r.link} desabilitado={dis}
@@ -149,12 +141,8 @@ export default function Reguas({ reguas, clientes = [], podeEditar, salvar, cria
                   aoMudar={(v) => guarda(() => salvar(r.id, { status: v }), "trocar o status")} />
               </td>
               <td>
-                <input className="cell" type="text" placeholder="…" disabled={dis}
-                  defaultValue={r.observacao || ""} title={r.observacao || ""}
-                  onBlur={(e) => {
-                    if ((e.target.value || "") !== (r.observacao || ""))
-                      guarda(() => salvar(r.id, { observacao: e.target.value || null }), "salvar");
-                  }} />
+                <CampoTexto valor={r.observacao} desabilitado={dis} placeholder="…"
+                  aoSalvar={(v) => guarda(() => salvar(r.id, { observacao: v }), "salvar")} />
               </td>
               <td>
                 <button className="del" disabled={dis} title="Remover régua"

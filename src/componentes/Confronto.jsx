@@ -1,8 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase-browser";
-import { chamaFuncao } from "@/lib/funcoes";
 import { fmtBR } from "@/lib/formato";
 import { urlCard } from "@/lib/azure-cliente";
 import { MAPA_ESTADO, corEstado } from "@/lib/constantes";
@@ -16,30 +13,8 @@ import { MAPA_ESTADO, corEstado } from "@/lib/constantes";
  * ou quando um lote do sync falhou. É por isso que a tela existe: é a única
  * forma de descobrir o que o sync não trouxe sem abrir o Azure card a card.
  */
-export default function Confronto({ podeEditar, aoTrazer, aviso }) {
-  const [estado, setEstado] = useState("carregando");
-  const [dados, setDados] = useState(null);
-  const [msg, setMsg] = useState("");
-
-  const conferir = useCallback(async () => {
-    if (!podeEditar) return setEstado("sem-permissao");
-    setEstado("carregando");
-    try {
-      const { data } = (await supabase()?.auth.getSession()) || {};
-      const { ok, dados: r } = await chamaFuncao("azure-pendentes", {}, data?.session?.access_token);
-      if (!ok) {
-        setMsg(r?.erro || "Não consegui falar com o Azure.");
-        return setEstado("erro");
-      }
-      setDados(r);
-      setEstado("ok");
-    } catch {
-      setMsg("Não consegui falar com o Azure agora.");
-      setEstado("erro");
-    }
-  }, [podeEditar]);
-
-  useEffect(() => { conferir(); }, [conferir]);
+export default function Confronto({ confronto, aoTrazer }) {
+  const { dados, estado, msg, conferir } = confronto;
 
   if (estado === "sem-permissao") {
     return (
@@ -86,7 +61,7 @@ export default function Confronto({ podeEditar, aoTrazer, aviso }) {
           <div className="kpi">
             <span className="k">Abertos no Azure</span>
             <span className="v">{dados.abertos}</span>
-            <span className="s">fora de {(dados.estadosFinais || []).join(", ")}</span>
+            <span className="s">{dados.tipo ? `tipo ${dados.tipo}` : "todos os tipos"} · fora de {(dados.estadosFinais || []).join(", ")}</span>
           </div>
           <div className="kpi">
             <span className="k">Já na pauta</span>
@@ -104,7 +79,7 @@ export default function Confronto({ podeEditar, aoTrazer, aviso }) {
 
       <div className="card">
         <div className="ch-h">
-          <h3>Cards abertos que não estão na pauta</h3>
+          <h3>Cards {dados.tipo ? <em style={{ fontStyle: "normal", color: "var(--accent-ink)" }}>{dados.tipo}</em> : ""} abertos que não estão na pauta</h3>
           <span className="sub">o Azure é a fonte; a pauta deveria espelhar</span>
         </div>
 

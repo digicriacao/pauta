@@ -5,7 +5,7 @@ import { LS_LARGURAS, colunasFila } from "@/lib/constantes";
 import { fmtBR } from "@/lib/formato";
 import { urlCard } from "@/lib/azure-cliente";
 import { useLarguras } from "@/lib/larguras";
-import { Cabecalhos, Colunas } from "./GradeBase";
+import { Cabecalhos, Colunas, CampoTexto } from "./GradeBase";
 
 const mix = (cor, pct) => `color-mix(in srgb, ${cor} ${pct}, var(--surface))`;
 
@@ -100,13 +100,10 @@ export default function Fila({ fila, pedidos, cfg, podeEditar, salvar, aviso }) 
                   </span>
                 </td>
                 <td>
-                  <input className="cell" type="text" disabled={dis}
+                  <CampoTexto valor={motivo} desabilitado={dis}
                     placeholder={semMotivo ? fila.dicaMotivo : "…"}
-                    defaultValue={motivo} title={motivo}
-                    onBlur={async (e) => {
-                      const v = e.target.value.trim();
-                      if (v === motivo) return;
-                      const r = await salvar(p.id, { [fila.campoMotivo]: v || null });
+                    aoSalvar={async (v) => {
+                      const r = await salvar(p.id, { [fila.campoMotivo]: v });
                       if (r?.erro) aviso(`Não deu para salvar o motivo: ${r.erro}`);
                     }} />
                 </td>

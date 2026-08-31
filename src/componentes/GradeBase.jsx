@@ -45,6 +45,70 @@ export function Colunas({ colunas, larg }) {
 }
 
 /**
+ * Campo de texto das células editáveis (observação, motivo, cliente, título).
+ *
+ * Existe por causa de um detalhe chato: texto copiado do Word, do Teams ou de
+ * um e-mail quase sempre vem com quebra de linha no fim, e um `<input>` de uma
+ * linha só recusa o conteúdo inteiro quando isso acontece — a pessoa dá Ctrl+V
+ * e nada aparece. Aqui a colagem é tratada à mão: o texto é achatado em uma
+ * linha e inserido na posição do cursor.
+ *
+ * O valor é controlado, mas só se re-sincroniza com o banco quando o campo não
+ * está em foco — assim o sync não apaga o que alguém está escrevendo.
+ */
+export function CampoTexto({
+  valor, aoSalvar, desabilitado, placeholder, lista, classe = "cell", dica, permiteVazio = true,
+}) {
+  const [txt, setTxt] = useState(valor || "");
+  const [focado, setFocado] = useState(false);
+
+  useEffect(() => {
+    if (!focado) setTxt(valor || "");
+  }, [valor, focado]);
+
+  function salva() {
+    const v = txt.trim();
+    if (v === (valor || "")) return;
+    if (!v && !permiteVazio) return setTxt(valor || "");
+    aoSalvar(v || null);
+  }
+
+  return (
+    <input
+      className={classe}
+      type="text"
+      placeholder={placeholder}
+      list={lista}
+      disabled={desabilitado}
+      value={txt}
+      title={dica ?? (txt || placeholder || "")}
+      onChange={(e) => setTxt(e.target.value)}
+      onFocus={() => setFocado(true)}
+      onBlur={() => { setFocado(false); salva(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") { setTxt(valor || ""); e.currentTarget.blur(); }
+      }}
+      onPaste={(e) => {
+        const bruto = e.clipboardData?.getData("text");
+        if (!bruto) return;
+        e.preventDefault();
+        const limpo = bruto.replace(/\s*\r?\n\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+        const el = e.currentTarget;
+        const ini = el.selectionStart ?? txt.length;
+        const fim = el.selectionEnd ?? txt.length;
+        const novo = txt.slice(0, ini) + limpo + txt.slice(fim);
+        setTxt(novo);
+        const cursor = ini + limpo.length;
+        requestAnimationFrame(() => {
+          try { el.setSelectionRange(cursor, cursor); } catch {}
+        });
+      }}
+    />
+  );
+}
+
+/**
  * Data sem o ano. O input nativo insiste em mostrar o ano — então a célula
  * parada é texto, e o input só aparece (com o calendário aberto) no clique.
  * `hora` troca para data + hora combinada.

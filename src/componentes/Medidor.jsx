@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { MEDIDOR_RECURSOS } from "@/lib/constantes";
 import { hojeISO } from "@/lib/formato";
 
 /** "Vinícius" e "vinicius" são a mesma pessoa. */
@@ -15,29 +14,29 @@ function ehDeHoje(p, hoje) {
 }
 
 /**
- * Quanto esforço cada uma das quatro pessoas tem marcado para hoje.
- * O esforço vem do card; a barra é relativa a quem tem mais no dia, e o
- * número ao lado é o valor absoluto — a barra dá o contraste, o número dá o
- * fato. Quem está sem nada aparece igual, com zero: some da lista seria pior,
- * porque a ausência é justamente o que se quer enxergar.
+ * Quanto esforço cada pessoa tem marcado para hoje.
+ *
+ * Quem aparece aqui sai do cadastro de Recursos, no Admin — a caixinha
+ * "medidor" de cada linha. Assim entra e sai gente sem mexer em código.
+ *
+ * Cada célula traz o número (o fato) sobre uma barra fininha proporcional a
+ * quem tem mais no dia (o contraste). Quem está zerado continua na lista: a
+ * ausência de carga é justamente o que se quer enxergar de relance.
  */
 export default function Medidor({ pedidos, cfg }) {
   const linhas = useMemo(() => {
     const hoje = hojeISO();
     const doDia = pedidos.filter((p) => ehDeHoje(p, hoje));
+    const escolhidos = (cfg.recursos || []).filter((r) => r.medidor);
 
-    return MEDIDOR_RECURSOS.map((nome) => {
-      const alvo = chave(nome);
-      // Casa tanto pelo nome do Azure quanto pelo apelido da pauta.
-      const apelidos = cfg.recursos
-        .filter((r) => chave(r.nome_azure).includes(alvo) || alvo.includes(chave(r.nome_pauta)))
-        .map((r) => chave(r.nome_azure));
+    return escolhidos.map((r) => {
+      const az = chave(r.nome_azure);
       const meus = doDia.filter((p) => {
-        const az = chave(p.azure_assigned_to);
-        return az && (az.includes(alvo) || apelidos.some((a) => a && az.includes(a)));
+        const quem = chave(p.azure_assigned_to);
+        return quem && az && (quem.includes(az) || az.includes(quem));
       });
       return {
-        nome,
+        nome: r.nome_pauta || r.nome_azure,
         esforco: meus.reduce((s, p) => s + (Number(p.esforco) || 0), 0),
         pedidos: meus.length,
       };
@@ -53,19 +52,21 @@ export default function Medidor({ pedidos, cfg }) {
         <span className="k">Esforço de hoje</span>
         <span className="med-total mono">{total}</span>
       </div>
-      <div className="med-lista">
-        {linhas.map((l) => (
-          <div className="med-row" key={l.nome}
-            title={`${l.nome}: ${l.esforco} de esforço em ${l.pedidos} ${l.pedidos === 1 ? "pedido" : "pedidos"} com entrega hoje`}>
-            <span className="med-nome">{l.nome}</span>
-            <span className="med-tri">
-              <i className={l.esforco ? "" : "zero"} style={{ width: `${(l.esforco / max) * 100}%` }} />
-            </span>
-            <span className="med-num mono">{l.esforco}</span>
-          </div>
-        ))}
-      </div>
-      <span className="med-pe">soma do esforço dos cards com entrega hoje</span>
+
+      {linhas.length ? (
+        <div className="med-cels">
+          {linhas.map((l) => (
+            <div className={`med-cel${l.esforco ? "" : " vazio"}`} key={l.nome}
+              title={`${l.nome}: ${l.esforco} de esforço em ${l.pedidos} ${l.pedidos === 1 ? "pedido" : "pedidos"} com entrega hoje`}>
+              <span className="med-num mono">{l.esforco}</span>
+              <span className="med-nome">{l.nome}</span>
+              <span className="med-tri"><i style={{ width: `${(l.esforco / max) * 100}%` }} /></span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="med-sem">Ninguém marcado. Escolha em <b>Admin → Recursos</b>.</p>
+      )}
     </aside>
   );
 }

@@ -114,7 +114,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
         ["Solicitação","Card","Pasta","Cliente","Demandante","Pedido","Artes","Esforço","Tipo","Entrega","Azure","Interno","Entrega combinada","Entregue","Recurso","Obs","Motivo da pausa","Motivo do cancelamento"],
         base.map((p) => [
           fmtBRL(p.data_solicitacao), p.azure_id ? "#" + p.azure_id : "", p.pasta_codigo || "",
-          nm.cli(p), nm.dem(p), p.titulo, p.qtd_artes ?? 1, p.esforco ?? "", nm.tipo(p), fmtBRL(p.data_entrega),
+          nm.cli(p), nm.dem(p), p.titulo, p.qtd_artes ?? 0, p.esforco ?? "", nm.tipo(p), fmtBRL(p.data_entrega),
           p.azure_state || "", nm.st(p), p.entrega_em || "", p.entregue ? "sim" : "não",
           nm.rec(p), p.observacao || "", p.motivo_pausa || "", p.motivo_cancelamento || "",
         ]));
@@ -178,7 +178,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
     return {
       rot: c.rot,
       pedidos: c.v,
-      artes: cs.reduce((s, p) => s + (p.qtd_artes ?? 1), 0),
+      artes: cs.reduce((s, p) => s + (p.qtd_artes ?? 0), 0),
       esforco: cs.reduce((s, p) => s + (Number(p.esforco) || 0), 0),
       entregues: cs.filter((p) => situacaoDe(p, cfg) === "entregue").length,
       parados: cs.filter((p) => situacaoDe(p, cfg) === "parado").length,
@@ -192,7 +192,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
     return {
       rot: r.rot,
       pedidos: r.v,
-      artes: rs.reduce((s, p) => s + (p.qtd_artes ?? 1), 0),
+      artes: rs.reduce((s, p) => s + (p.qtd_artes ?? 0), 0),
       esforco: rs.reduce((s, p) => s + (Number(p.esforco) || 0), 0),
       ajustes: rs.filter((p) => /ajuste/i.test(nm.tipo(p))).length,
       entregues: rs.filter((p) => situacaoDe(p, cfg) === "entregue").length,

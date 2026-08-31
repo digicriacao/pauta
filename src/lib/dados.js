@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
+import { chamaFuncao } from "@/lib/funcoes";
 
 /**
  * Carrega cadastros + pedidos, mantém a grade viva por Realtime e expõe as
@@ -205,6 +206,42 @@ export function useReguas() {
   }, [reguas]);
 
   return { reguas, carregando, salvarRegua, criarRegua, removerRegua };
+}
+
+/**
+ * Confronto com o Azure. Fica aqui, e não dentro da tela, porque dois lugares
+ * precisam do mesmo número: a bolinha do botão no cabeçalho e a área em si.
+ * Uma consulta só, um estado só — sem duas chamadas ao Azure por carregamento.
+ */
+export function useConfronto(podeEditar) {
+  const [dados, setDados] = useState(null);
+  const [estado, setEstado] = useState("carregando");
+  const [msg, setMsg] = useState("");
+
+  const conferir = useCallback(async () => {
+    if (!podeEditar) {
+      setDados(null);
+      return setEstado("sem-permissao");
+    }
+    setEstado("carregando");
+    try {
+      const { data } = (await supabase()?.auth.getSession()) || {};
+      const { ok, dados: r } = await chamaFuncao("azure-pendentes", {}, data?.session?.access_token);
+      if (!ok) {
+        setMsg(r?.erro || "Não consegui falar com o Azure.");
+        return setEstado("erro");
+      }
+      setDados(r);
+      setEstado("ok");
+    } catch {
+      setMsg("Não consegui falar com o Azure agora.");
+      setEstado("erro");
+    }
+  }, [podeEditar]);
+
+  useEffect(() => { conferir(); }, [conferir]);
+
+  return { dados, estado, msg, conferir, faltando: dados?.faltando?.length ?? 0 };
 }
 
 /** Sessão + papel. O botão "Só leitura" vira "Editando" só para editor/admin. */

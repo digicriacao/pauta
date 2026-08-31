@@ -64,6 +64,12 @@ function Secao({ titulo, descricao, tabela, itens, campos, novo, aoMudar, aviso,
                 onBlur={(e) => e.target.value !== item[c.chave] && grava(item, { [c.chave]: e.target.value })} />
             ) : c.tipo === "seta" ? (
               <span className="arrow" key={`seta${k}`}>→</span>
+            ) : c.tipo === "check" ? (
+              <label className="achk" key={c.chave} title={c.dica}>
+                <input type="checkbox" checked={!!item[c.chave]}
+                  onChange={(e) => grava(item, { [c.chave]: e.target.checked })} />
+                {c.rotulo}
+              </label>
             ) : (
               <input key={c.chave} type="text" defaultValue={item[c.chave] || ""} placeholder={c.placeholder}
                 onBlur={(e) => e.target.value !== (item[c.chave] || "") && grava(item, { [c.chave]: e.target.value })} />
@@ -86,7 +92,7 @@ function Secao({ titulo, descricao, tabela, itens, campos, novo, aoMudar, aviso,
 
 export default function Admin({ cfg, aoFechar, recarregar, aviso }) {
   const [perfis, setPerfis] = useState([]);
-  const cid = cfg.cliente?.id;
+  const cid = cfg.clientes?.[0]?.id;
 
   const carregaPerfis = useCallback(async () => {
     const { data } = await supabase().from("perfis").select("id, usuario, nome, papel").order("usuario");
@@ -144,14 +150,16 @@ export default function Admin({ cfg, aoFechar, recarregar, aviso }) {
             novo={{ nome: "NOVO STATUS", cor: "#7A2E45" }} />
 
           <Secao titulo="Recursos" tabela="recursos"
-            descricao="De-para entre o nome que vem do Azure e o nome que aparece na pauta. Sempre em ordem alfabética."
+            descricao="De-para entre o nome que vem do Azure e o nome que aparece na pauta. A caixinha “medidor” escolhe quem aparece no painel de esforço, no topo da home — marque e desmarque à vontade, e use o × para remover a pessoa."
             itens={cfg.recursos} aoMudar={recarregar} aviso={aviso}
             campos={[
               { chave: "nome_azure", placeholder: "nome no Azure" },
               { tipo: "seta" },
               { chave: "nome_pauta", placeholder: "nome na pauta" },
+              { chave: "medidor", tipo: "check", rotulo: "medidor",
+                dica: "Mostrar esta pessoa no painel de esforço do topo da home" },
             ]}
-            novo={{ nome_azure: "", nome_pauta: "" }} />
+            novo={{ nome_azure: "", nome_pauta: "", medidor: false }} />
 
           <div className="sec">
             <h3>Status do Azure</h3>

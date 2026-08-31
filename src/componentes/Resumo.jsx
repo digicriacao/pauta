@@ -7,12 +7,9 @@ export default function Resumo({ pedidos, mesSel, cfg }) {
   const nomeStatus = (id) => cfg.status.find((s) => s.id === id)?.nome;
   const conta = (nome) => pedidos.filter((p) => nomeStatus(p.status_interno_id) === nome).length;
   const entregues = pedidos.filter((p) => p.entregue);
-  const tipoAjuste = cfg.tipos.find((t) => /ajuste/i.test(t.nome))?.id;
-  const ajustes = pedidos.filter((p) => p.tipo_id === tipoAjuste).length;
-
   // Artes já feitas no mês: só o que está marcado como entregue conta.
-  const artes = entregues.reduce((s, p) => s + (p.qtd_artes ?? 1), 0);
-  const artesTotal = pedidos.reduce((s, p) => s + (p.qtd_artes ?? 1), 0);
+  const artes = entregues.reduce((s, p) => s + (p.qtd_artes ?? 0), 0);
+  const artesTotal = pedidos.reduce((s, p) => s + (p.qtd_artes ?? 0), 0);
 
   const linhas = [
     ["Pedidos no mês", pedidos.length, `${rotuloMes(mesSel)} · linhas na pauta`],
@@ -20,7 +17,6 @@ export default function Resumo({ pedidos, mesSel, cfg }) {
     ["Aguardando aprovação", conta("ENVIADO PARA APROVAÇÃO") + conta("AGUARDANDO APROVAÇÃO INTERNA"), "parados esperando alguém"],
     ["Entregues", entregues.length, `${Math.round((entregues.length / n) * 100)}% do mês`],
     ["Artes no mês", artes, `de ${artesTotal} previstas`],
-    ["Ajustes", ajustes, `${Math.round((ajustes / n) * 100)}% dos pedidos`],
   ];
 
   return (

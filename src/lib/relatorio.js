@@ -62,7 +62,7 @@ export function calcula(base, cfg) {
     SITUACOES.map((s) => [s.id, base.filter((p) => situacaoDe(p, cfg) === s.id)])
   );
 
-  const artes = (arr) => soma(arr, (p) => p.qtd_artes ?? 1);
+  const artes = (arr) => soma(arr, (p) => p.qtd_artes ?? 0);
   const esforco = (arr) => soma(arr, (p) => Number(p.esforco) || 0);
 
   // Dias com entrega prevista, e quanto já foi entregue em cada um.
@@ -133,7 +133,7 @@ export function calcula(base, cfg) {
     recursosTop: topN(recursos),
     clientes,
     clientesTop: topN(clientes),
-    artesPorRecurso: topN(agrupa(base, nm.rec, (p) => p.qtd_artes ?? 1)),
+    artesPorRecurso: topN(agrupa(base, nm.rec, (p) => p.qtd_artes ?? 0)),
     esforcoPorRecurso: topN(agrupa(base, nm.rec, (p) => Number(p.esforco) || 0)),
     demandantes: topN(agrupa(base, nm.dem)),
     demandantesTodos: agrupa(base, nm.dem),

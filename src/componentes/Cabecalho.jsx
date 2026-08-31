@@ -5,7 +5,7 @@ import { BASE } from "@/lib/constantes";
 
 export default function Cabecalho({
   meses, mesAtual, mesSel, setMesSel, contaMes,
-  perfil, podeEditar, ehAdmin, aoLogin, aoAdmin, vista, setVista,
+  perfil, podeEditar, ehAdmin, aoLogin, aoAdmin, vista, setVista, foraDaPauta = 0,
 }) {
   const i = meses.indexOf(mesAtual);
   const anteriores = meses.slice(0, Math.max(0, i - 1));
@@ -83,6 +83,11 @@ export default function Cabecalho({
           title="Cards abertos no Azure que não estão na pauta"
         >
           {vista === "azure" ? "← Voltar à pauta" : "⚖ Azure"}
+          {vista !== "azure" && foraDaPauta > 0 && (
+            <span className="bolha vm" title={`${foraDaPauta} card${foraDaPauta === 1 ? "" : "s"} aberto${foraDaPauta === 1 ? "" : "s"} no Azure fora da pauta`}>
+              {foraDaPauta}
+            </span>
+          )}
         </button>
 
         <button className="hbtn ico" onClick={trocaTema} title="Alternar tema" aria-label="Alternar tema">◐</button>

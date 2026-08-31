@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useDados, useReguas, useSessao } from "@/lib/dados";
+import { useDados, useReguas, useSessao, useConfronto } from "@/lib/dados";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
 import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
@@ -23,6 +23,7 @@ export default function Pauta() {
   const { perfil, podeEditar, ehAdmin, recarregar: relerSessao, sair } = useSessao();
 
   const { reguas, salvarRegua, criarRegua, removerRegua } = useReguas();
+  const confronto = useConfronto(podeEditar);
 
   const [mesSel, setMesSel] = useState(() => hojeISO().slice(0, 7));
   const [vista, setVista] = useState("pauta");
@@ -263,7 +264,7 @@ export default function Pauta() {
         mesSel={mesSel} setMesSel={setMesSel} contaMes={contaMes}
         perfil={perfil} podeEditar={podeEditar} ehAdmin={ehAdmin}
         aoLogin={() => setMostraLogin(true)} aoAdmin={() => setMostraAdmin(true)}
-        vista={vista} setVista={setVista}
+        vista={vista} setVista={setVista} foraDaPauta={confronto.faltando}
       />
 
       <main className="wrap">
@@ -351,7 +352,7 @@ export default function Pauta() {
 
             {area === "pauta" && (
               <Grade
-                pedidos={visiveis} cfg={cfg} podeEditar={podeEditar}
+                pedidos={visiveis} cfg={cfg} clientes={clientes} podeEditar={podeEditar}
                 salvar={salvarCampo} remover={removerPedido} aviso={aviso}
                 aoColar={aoColar} aoIniciar={iniciarPedido} aoVincular={vincularCard}
                 ordem={ordem} aoOrdenar={aoOrdenar}
@@ -373,7 +374,7 @@ export default function Pauta() {
             )}
           </section>
         ) : vista === "azure" ? (
-          <Confronto podeEditar={podeEditar} aviso={aviso} aoTrazer={aoColar} />
+          <Confronto confronto={confronto} aoTrazer={aoColar} />
         ) : (
           <Relatorios pedidos={doMes} cfg={cfg} mesSel={mesSel} aviso={aviso} dica={dica} />
         )}

@@ -5,7 +5,7 @@ import { COLUNAS, LS_LARGURAS, MAPA_ESTADO, corEstado } from "@/lib/constantes";
 import { fmtBR, deInputLocal, hojeISO } from "@/lib/formato";
 import { urlCard, urlNovoCard, idDoLink } from "@/lib/azure-cliente";
 import { useLarguras } from "@/lib/larguras";
-import { Cabecalhos, Colunas, CampoData } from "./GradeBase";
+import { Cabecalhos, Colunas, CampoData, CampoTexto } from "./GradeBase";
 
 const mix = (cor, pct) => `color-mix(in srgb, ${cor} ${pct}, var(--surface))`;
 
@@ -92,12 +92,9 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
       <td>
         {/* Cliente = campo Campanha do card. Só a linha sem card aceita digitar. */}
         {rascunho ? (
-          <input className="cell" type="text" placeholder="cliente" disabled={dis}
-            defaultValue={p.campanha || ""} title="Enquanto não houver card, escreva o cliente à mão"
-            onBlur={(e) => {
-              const v = e.target.value.trim();
-              if (v !== (p.campanha || "")) salvar(p.id, { campanha: v || null });
-            }} />
+          <CampoTexto valor={p.campanha} desabilitado={dis} placeholder="cliente"
+            lista="clientes-pauta" dica="Enquanto não houver card, escreva o cliente à mão"
+            aoSalvar={(v) => salvar(p.id, { campanha: v })} />
         ) : p.campanha ? (
           <div className="ro cliente" title={`Campanha no card: ${p.campanha}`}>{p.campanha}</div>
         ) : (
@@ -114,12 +111,9 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
       <td className="pedido">
         {rascunho ? (
           <span className="rasc">
-            <input className="titulo" defaultValue={p.titulo || ""} disabled={dis}
-              placeholder="nome do pedido" title={p.titulo || "nome do pedido"}
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                if (v && v !== (p.titulo || "")) salvar(p.id, { titulo: v });
-              }} />
+            <CampoTexto classe="titulo" valor={p.titulo} desabilitado={dis}
+              placeholder="nome do pedido" permiteVazio={false}
+              aoSalvar={(v) => salvar(p.id, { titulo: v })} />
             <a className="abrir-card" href={urlNovoCard(p.titulo, p.campanha)}
                target="_blank" rel="noopener noreferrer"
                title="Abre o formulário de card novo no Azure, já com este título">
@@ -132,12 +126,12 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
       </td>
       <td>
         <input className="qtd" type="number" min="0" step="1" inputMode="numeric" disabled={dis}
-          defaultValue={p.qtd_artes ?? 1}
+          defaultValue={p.qtd_artes ?? 0}
           title="Quantidade de artes deste pedido"
           onBlur={(e) => {
             const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
             e.target.value = n;
-            if (n !== (p.qtd_artes ?? 1)) salvar(p.id, { qtd_artes: n });
+            if (n !== (p.qtd_artes ?? 0)) salvar(p.id, { qtd_artes: n });
           }} />
       </td>
       <td>
@@ -181,10 +175,8 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
           : <div className="ro empty">—</div>}
       </td>
       <td>
-        <input className="cell" type="text" placeholder="…" disabled={dis} defaultValue={p.observacao || ""}
-          onBlur={(e) => {
-            if ((e.target.value || "") !== (p.observacao || "")) salvar(p.id, { observacao: e.target.value || null });
-          }} />
+        <CampoTexto valor={p.observacao} desabilitado={dis} placeholder="…"
+          aoSalvar={(v) => salvar(p.id, { observacao: v })} />
       </td>
       <td>
         <button className="del" disabled={dis} title="Remover linha" onClick={() => remover(p)}>×</button>
@@ -193,7 +185,7 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
   );
 }
 
-export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoColar, aoIniciar, aoVincular, aviso, ordem, aoOrdenar }) {
+export default function Grade({ pedidos, cfg, clientes = [], podeEditar, salvar, remover, aoColar, aoIniciar, aoVincular, aviso, ordem, aoOrdenar }) {
   const { larg, pegaBorda } = useLarguras(LS_LARGURAS);
   const [nomeNovo, setNomeNovo] = useState("");
 
@@ -211,6 +203,9 @@ export default function Grade({ pedidos, cfg, podeEditar, salvar, remover, aoCol
 
   return (
     <div className="gridwrap">
+      <datalist id="clientes-pauta">
+        {clientes.map((c) => <option key={c} value={c} />)}
+      </datalist>
       <table className="grade" style={{ minWidth: total, width: "100%" }}>
         <Colunas colunas={COLUNAS} larg={larg} />
         <Cabecalhos colunas={COLUNAS} larg={larg} pegaBorda={pegaBorda} ordem={ordem} aoOrdenar={aoOrdenar} />
