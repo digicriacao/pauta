@@ -407,6 +407,13 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .grade tbody tr.parada td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
 .grade tbody tr.parada .pedido .ro{color:var(--muted)}
 
+/* Fura-fila: rosa da casa, mais forte que o vermelho das exceções. Vem depois
+   delas na folha justamente para vencer quando uma linha é as duas coisas. */
+.grade tbody tr.fura td{background:color-mix(in srgb, var(--accent) 13%, var(--surface))}
+.grade tbody tr.fura:hover td{background:color-mix(in srgb, var(--accent) 20%, var(--surface))}
+.grade tbody tr.fura td:first-child{box-shadow:inset 4px 0 0 var(--accent)}
+.grade tbody tr.fura.feito{opacity:.62}
+
 /* Parado ou cancelado ainda sem motivo escrito: é o que a bolinha conta. */
 .grade tbody tr.pendente td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
 
@@ -507,7 +514,8 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 
 .medidor{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   padding:9px 12px;display:flex;flex-direction:column;gap:7px;min-width:250px}
-.med-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.med-h{display:flex;align-items:baseline;gap:5px}
+.med-esc{margin-right:auto}
 .med-h .k{font-family:var(--mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
 .med-total{font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
 .med-cels{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(52px,1fr);gap:10px}
@@ -515,10 +523,19 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .med-num{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--ink);
   font-variant-numeric:tabular-nums;line-height:1}
 .med-nome{font-size:10.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.med-tri{display:block;height:3px;border-radius:2px;background:var(--surface-3);overflow:hidden;margin-top:2px}
-.med-tri i{display:block;height:100%;border-radius:2px;background:var(--accent)}
+/* A barra é escala fixa: cheia = um dia cheio. Os três traços marcam 25, 50 e
+   75%, senão "meia barra" viraria chute. */
+.med-tri{position:relative;display:block;height:5px;border-radius:3px;background:var(--surface-3);
+  overflow:hidden;margin-top:3px}
+.med-tri::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(to right,
+    transparent 0 calc(25% - 1px), var(--surface) calc(25% - 1px) 25%)}
+.med-tri i{display:block;height:100%;border-radius:3px;background:var(--accent)}
 .med-cel.vazio .med-num{color:var(--faint)}
 .med-cel.vazio .med-tri i{background:transparent}
+.med-cel.estourou .med-num{color:var(--alerta)}
+.med-cel.estourou .med-tri i{background:var(--alerta)}
+.med-esc{font-size:10px;color:var(--faint)}
 .med-sem{margin:2px 0 0;font-size:11px;color:var(--faint);line-height:1.35}
 
 /* o nome do cliente na grade: some do jeito que um dado de leitura deve sumir */
