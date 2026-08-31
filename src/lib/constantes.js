@@ -160,6 +160,9 @@ export const GRUPOS_BLOCOS = ["Topo", "Gráficos", "Tabelas"];
    assim "Vinicius", "Vinícius" e "Vini" caem na mesma pessoa. */
 export const MEDIDOR_RECURSOS = ["André", "Letícia", "Gabriela", "Vinicius"];
 
+/** Esforço que enche a barra do medidor: 10 é o dia cheio de uma pessoa. */
+export const ESFORCO_DIA = 10;
+
 export const LS_BLOCOS = "pauta.v2.blocos";
 export const LS_LARGURAS = "pauta.v2.larguras";
 export const LS_ORDEM = "pauta.v2.ordem";

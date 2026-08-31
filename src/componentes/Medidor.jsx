@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { hojeISO } from "@/lib/formato";
 import { achaRecurso } from "@/lib/recursos";
+import { ESFORCO_DIA } from "@/lib/constantes";
 
 /** Entrega marcada para hoje — pela hora combinada, ou pela data do card. */
 function ehDeHoje(p, hoje) {
@@ -36,24 +37,29 @@ export default function Medidor({ pedidos, cfg }) {
     });
   }, [pedidos, cfg.recursos]);
 
-  const max = Math.max(1, ...linhas.map((l) => l.esforco));
+  // A barra é percentual de um dia cheio, não do colega mais carregado: dez de
+  // esforço enche. Assim "meia barra" quer dizer sempre a mesma coisa, hoje e
+  // no mês que vem — comparar com o vizinho não diria nada sobre capacidade.
   const total = linhas.reduce((s, l) => s + l.esforco, 0);
+  const pct = (v) => Math.min(100, (v / ESFORCO_DIA) * 100);
 
   return (
     <aside className="medidor">
       <div className="med-h">
         <span className="k">Esforço de hoje</span>
+        <span className="med-esc mono" title={`Cada barra enche em ${ESFORCO_DIA} — um dia cheio`}>escala {ESFORCO_DIA}</span>
         <span className="med-total mono">{total}</span>
       </div>
 
       {linhas.length ? (
         <div className="med-cels">
           {linhas.map((l) => (
-            <div className={`med-cel${l.esforco ? "" : " vazio"}`} key={l.nome}
-              title={`${l.nome}: ${l.esforco} de esforço em ${l.pedidos} ${l.pedidos === 1 ? "pedido" : "pedidos"} com entrega hoje`}>
+            <div className={`med-cel${l.esforco ? "" : " vazio"}${l.esforco > ESFORCO_DIA ? " estourou" : ""}`} key={l.nome}
+              title={`${l.nome}: ${l.esforco} de esforço em ${l.pedidos} ${l.pedidos === 1 ? "pedido" : "pedidos"} com entrega hoje` +
+                     ` — ${Math.round((l.esforco / ESFORCO_DIA) * 100)}% de um dia cheio (${ESFORCO_DIA})`}>
               <span className="med-num mono">{l.esforco}</span>
               <span className="med-nome">{l.nome}</span>
-              <span className="med-tri"><i style={{ width: `${(l.esforco / max) * 100}%` }} /></span>
+              <span className="med-tri"><i style={{ width: `${pct(l.esforco)}%` }} /></span>
             </div>
           ))}
         </div>

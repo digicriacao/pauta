@@ -63,7 +63,10 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
   // O status interno pode marcar a linha como parada ou cancelada — as duas
   // saem do fluxo normal e ganham tratamento visual próprio.
   const st = cfg.status.find((s) => s.id === p.status_interno_id);
-  const excecao = st?.cancelamento ? "cancelada" : st?.pausa ? "parada" : "";
+  // Fura-fila passa na frente de tudo, inclusive do vermelho de parado e
+  // cancelado: é o único destaque que pede ação agora, não atenção depois.
+  const fura = /fura/i.test(cfg.tipos.find((t) => t.id === p.tipo_id)?.nome || "");
+  const excecao = fura ? "fura" : st?.cancelamento ? "cancelada" : st?.pausa ? "parada" : "";
 
   return (
     <tr className={`${p.entregue ? "feito" : ""} ${rascunho ? "rascunho" : ""} ${excecao}`}>

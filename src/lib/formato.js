@@ -15,10 +15,10 @@ export function diffDias(a, b) {
   return Math.round((d(b) - d(a)) / 86400000);
 }
 
-/** Em que aba o pedido cai. Quem manda é a SOLICITAÇÃO: pedido feito em
- *  agosto fica em agosto, mesmo entregando em setembro. A entrega só entra
- *  como desempate quando não há data de solicitação. */
-export const mesDe = (p) => (p.data_solicitacao || p.data_entrega || "").slice(0, 7);
+/** Em que aba o pedido cai. Quem manda é a ENTREGA do card: pedido que entrega
+ *  em setembro aparece em setembro, mesmo tendo sido pedido em agosto. A
+ *  solicitação só entra como desempate quando o card ainda não tem entrega. */
+export const mesDe = (p) => (p.data_entrega || p.data_solicitacao || "").slice(0, 7);
 
 /** '2026-08' -> 'AGO' */
 export const rotuloMes = (ym) => NOME_MES[Number(ym.slice(5, 7)) - 1];
