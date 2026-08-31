@@ -2,10 +2,12 @@
 
 import { NOME_MES } from "@/lib/formato";
 import { BASE } from "@/lib/constantes";
+import Presenca from "./Presenca";
 
 export default function Cabecalho({
   meses, mesAtual, mesSel, setMesSel, contaMes,
   perfil, podeEditar, ehAdmin, aoLogin, aoAdmin, vista, setVista, foraDaPauta = 0,
+  eu, gente = [],
 }) {
   const i = meses.indexOf(mesAtual);
   const anteriores = meses.slice(0, Math.max(0, i - 1));
@@ -64,11 +66,13 @@ export default function Cabecalho({
           })}
         </div>
 
+        <Presenca eu={eu} gente={gente} />
+
         <button className={`hbtn ${podeEditar ? "on" : ""}`} onClick={aoLogin} style={{ marginLeft: "auto" }}>
           {podeEditar ? `✎ Editando · ${perfil.usuario}` : perfil ? `👤 ${perfil.usuario} · sem edição` : "🔒 Só leitura"}
         </button>
 
-        {ehAdmin && <button className="hbtn" onClick={aoAdmin}>⚙ Admin</button>}
+        {podeEditar && <button className="hbtn" onClick={aoAdmin}>⚙ Admin</button>}
 
         <button
           className={`hbtn ${vista === "rel" ? "on" : ""}`}

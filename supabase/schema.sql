@@ -71,6 +71,8 @@ create table if not exists recursos (
   nome_azure text not null unique,
   nome_pauta text not null,
   area text check (area in ('DA','Redação','Motion','CRM')),
+  -- aparece no medidor de esforço do topo da home
+  medidor boolean not null default false,
   ativo boolean not null default true
 );
 
@@ -100,7 +102,7 @@ create table if not exists pedidos (
   status_interno_id int references status_internos,
   entrega_em        timestamptz,
   entregue          boolean not null default false,
-  qtd_artes         int not null default 1 check (qtd_artes >= 0),
+  qtd_artes         int not null default 0 check (qtd_artes >= 0),
   observacao        text,
   motivo_cancelamento text,
   motivo_pausa      text,
@@ -345,6 +347,7 @@ grant select on pauta_cliente to anon, authenticated;
 
 alter table pedidos add column if not exists qtd_artes int not null default 1
   check (qtd_artes >= 0);
+alter table pedidos alter column qtd_artes set default 0;
 alter table pedidos add column if not exists esforco numeric;
 alter table pedidos add column if not exists motivo_cancelamento text;
 alter table pedidos add column if not exists motivo_pausa text;
@@ -462,6 +465,95 @@ where coalesce(p.entrega_em::date, p.data_entrega)
 alter view pauta_cliente set (security_invoker = off);
 revoke all on pauta_cliente from anon, authenticated;
 grant select on pauta_cliente to anon, authenticated;
+
+-- ── medidor de esforço e artes começando em zero ────────────────────────────
+alter table pedidos alter column qtd_artes set default 0;
+alter table recursos add column if not exists medidor boolean not null default false;
+
+-- Quem aparece no medidor do topo. Depois disso é tudo pelo Admin.
+update recursos set medidor = true
+where nome_azure in ('André','Letícia','Gabriela','Vinicius');
+
+-- ── editores com quase tudo, e um histórico só para o admin ─────────────────
+-- Os cadastros (demandantes, tipos, status, recursos, clientes) passam a ser
+-- de editor. O que continua exclusivo do admin é mexer no papel das pessoas e
+-- LER o histórico de alterações.
+
+do $$
+declare t text;
+begin
+  foreach t in array array['clientes','demandantes','tipos','status_internos','recursos','config']
+  loop
+    execute format('drop policy if exists %I_admin on %I', t, t);
+    execute format('drop policy if exists %I_editor on %I', t, t);
+    execute format('create policy %I_editor on %I for all using (eh_editor()) with check (eh_editor())', t, t);
+  end loop;
+end $$;
+
+-- Só admin promove alguém. Sem esta trava, qualquer pessoa logada poderia
+-- editar o próprio perfil e virar admin — a política de linha não distingue
+-- coluna, então a proteção precisa ser um gatilho.
+create or replace function protege_papel() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.papel is distinct from old.papel and not eh_admin() then
+    raise exception 'Só um admin pode mudar o papel de alguém.';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists perfis_papel on perfis;
+create trigger perfis_papel before update on perfis
+  for each row execute function protege_papel();
+
+drop policy if exists perfis_admin on perfis;
+create policy perfis_admin on perfis for all using (eh_admin()) with check (eh_admin());
+
+-- O histórico: um registro por campo que mudou, com quem mudou e de onde.
+-- `security definer` é o que deixa o gatilho gravar sem depender das políticas
+-- de quem disparou a alteração.
+create or replace function registra_evento() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  campos text[] := array[
+    'titulo','campanha','demandante_id','tipo_id','status_interno_id','entrega_em',
+    'entregue','qtd_artes','esforco','observacao','motivo_pausa','motivo_cancelamento',
+    'data_solicitacao','data_entrega','azure_state','azure_assigned_to','pasta_codigo'];
+  c text;
+  antes jsonb;
+  depois jsonb;
+  quem uuid := auth.uid();
+  de_onde text := case when auth.uid() is null then 'sync' else 'app' end;
+begin
+  if TG_OP = 'INSERT' then
+    insert into eventos (pedido_id, campo, de, para, pessoa_id, origem)
+      values (new.id, '__criado', null, coalesce(new.titulo, '#' || new.azure_id::text), quem, de_onde);
+    return new;
+  elsif TG_OP = 'DELETE' then
+    -- pedido_id fica nulo de propósito: a linha some, o registro fica.
+    insert into eventos (pedido_id, campo, de, para, pessoa_id, origem)
+      values (null, '__removido', coalesce(old.titulo, '#' || old.azure_id::text), null, quem, de_onde);
+    return old;
+  end if;
+
+  antes := to_jsonb(old);
+  depois := to_jsonb(new);
+  foreach c in array campos loop
+    if (antes ->> c) is distinct from (depois ->> c) then
+      insert into eventos (pedido_id, campo, de, para, pessoa_id, origem)
+        values (new.id, c, antes ->> c, depois ->> c, quem, de_onde);
+    end if;
+  end loop;
+  return new;
+end $$;
+
+drop trigger if exists pedidos_log on pedidos;
+create trigger pedidos_log after insert or update or delete on pedidos
+  for each row execute function registra_evento();
+
+-- Ler o histórico é privilégio de admin.
+drop policy if exists eventos_leitura on eventos;
+create policy eventos_leitura on eventos for select using (eh_admin());
 
 -- ── fim da migração ─────────────────────────────────────────────────────────
 

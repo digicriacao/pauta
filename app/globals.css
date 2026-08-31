@@ -399,10 +399,12 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .grade tbody tr.cancelada td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
 .grade tbody tr.cancelada .pedido .ro{text-decoration:line-through;color:var(--muted)}
 
-/* Linha parada: sai do fluxo sem sumir, mas sem o alarme do cancelamento. */
-.grade tbody tr.parada td{background:color-mix(in srgb, var(--none) 9%, var(--surface))}
-.grade tbody tr.parada:hover td{background:color-mix(in srgb, var(--none) 15%, var(--surface))}
-.grade tbody tr.parada td:first-child{box-shadow:inset 3px 0 0 var(--none)}
+/* Linha fora do fluxo — parada, cancelada ou ainda sem card: as três em
+   vermelho, porque as três querem a mesma coisa, que é alguém olhar. O que
+   separa cancelada das outras é o título riscado. */
+.grade tbody tr.parada td{background:color-mix(in srgb, var(--alerta) 7%, var(--surface))}
+.grade tbody tr.parada:hover td{background:color-mix(in srgb, var(--alerta) 12%, var(--surface))}
+.grade tbody tr.parada td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
 .grade tbody tr.parada .pedido .ro{color:var(--muted)}
 
 /* Parado ou cancelado ainda sem motivo escrito: é o que a bolinha conta. */
@@ -445,7 +447,16 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .bl-item input{accent-color:var(--accent);cursor:pointer;margin:0}
 .bl-item em{margin-left:auto;font-style:normal;font-size:10.5px;color:var(--faint)}
 
-.kpis-rel{grid-template-columns:repeat(5,1fr)}
+/* Onze indicadores num grid de 5 colunas deixavam quatro buracos cinzentos na
+   última linha. Viraram cartões soltos que quebram sozinhos: o que sobra na
+   última fileira é fundo de página, não caixa vazia. O teto de largura impede
+   que dois indicadores órfãos se esparramem por meia tela. */
+.kpis-rel{display:flex;flex-wrap:wrap;gap:8px;background:transparent;border:0;border-radius:0}
+.kpis-rel .kpi{flex:1 1 168px;max-width:260px;min-width:0;padding:9px 13px;gap:1px;
+  border:1px solid var(--line);border-radius:var(--radius)}
+.kpis-rel .kpi .k{font-size:9px;letter-spacing:.1em}
+.kpis-rel .kpi .v{font-size:19px}
+.kpis-rel .kpi .s{font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* situação do recorte: uma barra, fatias separadas por 2px de superfície */
 .sitbar{display:flex;gap:2px;height:26px;margin-top:14px;border-radius:8px;overflow:hidden}
@@ -476,12 +487,8 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .achk input{accent-color:var(--accent);cursor:pointer;margin:0}
 .achk:has(input:checked){color:var(--accent-ink)}
 
-@media (max-width:1200px){
-  .kpis-rel{grid-template-columns:repeat(3,1fr)}
-}
 @media (max-width:760px){
   .charts{grid-template-columns:1fr}
-  .kpis-rel{grid-template-columns:repeat(2,1fr)}
   .blocos-pop{left:auto;right:0}
 }
 
@@ -536,3 +543,40 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .conf-sem{color:var(--faint);font-style:italic}
 .res .azchip{margin:0;justify-content:flex-start}
 .conf-trazer{height:26px;padding:0 10px;font-size:12px}
+
+/* ============================================================================
+   Presença, histórico e a barra do confronto
+   ============================================================================ */
+
+/* quem está com a pauta aberta agora */
+.pres{display:inline-flex;align-items:center;gap:7px;padding:0 10px;height:32px;
+  border:1px solid var(--line);background:var(--surface-2);border-radius:8px;cursor:default}
+.pres-n{font-size:12px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.pres-avs{display:flex;align-items:center}
+.pres-av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+  font-size:12px;font-style:normal;background:var(--surface);margin-left:-5px;
+  border:2px solid var(--surface)}
+.pres-av:first-child{margin-left:0}
+.pres-av.eu{outline:1px dashed var(--accent);outline-offset:1px}
+.pres-av.mais{font-size:10px;color:var(--muted);box-shadow:inset 0 0 0 2px var(--line-strong)!important}
+
+/* histórico de alterações, no Admin */
+.hist{display:flex;flex-direction:column;gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:8px;overflow:hidden;max-height:420px;overflow-y:auto}
+.hist-l{display:grid;grid-template-columns:104px 78px minmax(0,1.4fr) 108px minmax(0,1.6fr);
+  gap:8px;align-items:center;background:var(--surface);padding:6px 10px;font-size:11.5px}
+.hist-q{color:var(--faint);font-size:10.5px}
+.hist-p{color:var(--accent-ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-p.sync{color:var(--muted);font-weight:500;font-family:var(--mono);font-size:10.5px}
+.hist-t{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-c{color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.04em;
+  text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-v{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-v s{color:var(--faint);text-decoration-color:var(--line-strong)}
+
+/* barra de filtros dentro do confronto */
+.conf-barra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 4px;
+  padding-bottom:10px;border-bottom:1px solid var(--line)}
+.res th.ord{cursor:pointer;user-select:none}
+.res th.ord:hover{color:var(--ink-2)}
+.res th.ord[aria-sort]{color:var(--accent-ink)}

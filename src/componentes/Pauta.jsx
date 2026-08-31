@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDados, useReguas, useSessao, useConfronto } from "@/lib/dados";
+import { usePresenca } from "@/lib/presenca";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
 import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
@@ -24,6 +25,7 @@ export default function Pauta() {
 
   const { reguas, salvarRegua, criarRegua, removerRegua } = useReguas();
   const confronto = useConfronto(podeEditar);
+  const { eu, gente } = usePresenca();
 
   const [mesSel, setMesSel] = useState(() => hojeISO().slice(0, 7));
   const [vista, setVista] = useState("pauta");
@@ -265,6 +267,7 @@ export default function Pauta() {
         perfil={perfil} podeEditar={podeEditar} ehAdmin={ehAdmin}
         aoLogin={() => setMostraLogin(true)} aoAdmin={() => setMostraAdmin(true)}
         vista={vista} setVista={setVista} foraDaPauta={confronto.faltando}
+        eu={eu} gente={gente}
       />
 
       <main className="wrap">
@@ -395,8 +398,9 @@ export default function Pauta() {
           aoFechar={() => setMostraLogin(false)} aoEntrar={relerSessao} aoSair={sair} />
       )}
 
-      {mostraAdmin && ehAdmin && (
-        <Admin cfg={cfg} aoFechar={() => setMostraAdmin(false)} recarregar={recarregar} aviso={aviso} />
+      {mostraAdmin && podeEditar && (
+        <Admin cfg={cfg} ehAdmin={ehAdmin} aoFechar={() => setMostraAdmin(false)}
+          recarregar={recarregar} aviso={aviso} />
       )}
 
       {dicaTxt && (

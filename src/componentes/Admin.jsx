@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import { ESTADOS_AZURE, LS_LARGURAS, LS_ORDEM } from "@/lib/constantes";
+import { fmtBRL } from "@/lib/formato";
 
 const mix = (cor, pct) => `color-mix(in srgb, ${cor} ${pct}, var(--surface))`;
 
@@ -90,7 +91,106 @@ function Secao({ titulo, descricao, tabela, itens, campos, novo, aoMudar, aviso,
   );
 }
 
-export default function Admin({ cfg, aoFechar, recarregar, aviso }) {
+/** Nomes de campo em português, para o histórico não falar em `tipo_id`. */
+const CAMPOS = {
+  __criado: "entrou na pauta", __removido: "saiu da pauta",
+  titulo: "pedido", campanha: "cliente", demandante_id: "demandante", tipo_id: "tipo",
+  status_interno_id: "status interno", entrega_em: "entrega combinada", entregue: "check de entrega",
+  qtd_artes: "artes", esforco: "esforço", observacao: "observação",
+  motivo_pausa: "motivo da pausa", motivo_cancelamento: "motivo do cancelamento",
+  data_solicitacao: "solicitação", data_entrega: "entrega do card",
+  azure_state: "estado no Azure", azure_assigned_to: "recurso", pasta_codigo: "pasta",
+};
+
+const quando = (ts) => {
+  const d = new Date(ts);
+  return `${fmtBRL(d.toISOString().slice(0, 10))} ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+};
+
+/**
+ * Histórico de alterações — só admin enxerga, e a trava é do banco: a política
+ * de leitura da tabela `eventos` exige admin, então nem adianta chamar daqui
+ * sem ser. Quem grava é um gatilho no Postgres, um registro por campo mudado,
+ * o que faz o histórico valer também para o que o sync altera sozinho.
+ */
+function Historico({ cfg, perfis }) {
+  const [itens, setItens] = useState(null);
+  const [erro, setErro] = useState("");
+  const [soPessoas, setSoPessoas] = useState(true);
+
+  const carregar = useCallback(async () => {
+    let consulta = supabase()
+      .from("eventos")
+      .select("id, campo, de, para, em, origem, pessoa_id, pedidos(titulo, azure_id)")
+      .order("em", { ascending: false })
+      .limit(200);
+    if (soPessoas) consulta = consulta.eq("origem", "app");
+    const { data, error } = await consulta;
+    if (error) return setErro(error.message);
+    setErro("");
+    setItens(data || []);
+  }, [soPessoas]);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  /** Ids viram nome: ninguém quer ler "de 3 para 7". */
+  const legivel = (campo, valor) => {
+    if (valor === null || valor === undefined || valor === "") return "—";
+    const acha = (lista) => lista.find((x) => String(x.id) === String(valor))?.nome;
+    if (campo === "demandante_id") return acha(cfg.demandantes) || valor;
+    if (campo === "tipo_id") return acha(cfg.tipos) || valor;
+    if (campo === "status_interno_id") return acha(cfg.status) || valor;
+    if (campo === "entregue") return valor === "true" ? "sim" : "não";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return fmtBRL(valor);
+    return String(valor).length > 60 ? String(valor).slice(0, 60) + "…" : valor;
+  };
+
+  return (
+    <div className="sec">
+      <h3>Histórico de alterações</h3>
+      <p>
+        Um registro por campo alterado, com quem mexeu e quando. Só admin vê — a trava está
+        no banco, não só nesta tela. Últimos 200.
+      </p>
+      <label className="achk" style={{ marginBottom: 8 }}>
+        <input type="checkbox" checked={soPessoas} onChange={(e) => setSoPessoas(e.target.checked)} />
+        esconder o que o sync mudou sozinho
+      </label>
+
+      {erro && <p className="nada">Não consegui ler o histórico: {erro}</p>}
+      {!erro && itens === null && <p className="nada">Carregando…</p>}
+      {!erro && itens?.length === 0 && <p className="nada">Nada registrado ainda.</p>}
+
+      {!!itens?.length && (
+        <div className="hist">
+          {itens.map((e) => {
+            const pessoa = perfis.find((p) => p.id === e.pessoa_id);
+            const titulo = e.pedidos?.titulo || (e.pedidos?.azure_id ? `#${e.pedidos.azure_id}` : e.de || "—");
+            return (
+              <div className="hist-l" key={e.id}>
+                <span className="hist-q mono">{quando(e.em)}</span>
+                <span className={`hist-p${e.origem === "sync" ? " sync" : ""}`}>
+                  {e.origem === "sync" ? "sync" : pessoa?.usuario || "alguém"}
+                </span>
+                <span className="hist-t" title={titulo}>{titulo}</span>
+                <span className="hist-c">{CAMPOS[e.campo] || e.campo}</span>
+                {e.campo.startsWith("__") ? (
+                  <span className="hist-v" />
+                ) : (
+                  <span className="hist-v">
+                    <s>{legivel(e.campo, e.de)}</s> → <b>{legivel(e.campo, e.para)}</b>
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Admin({ cfg, ehAdmin, aoFechar, recarregar, aviso }) {
   const [perfis, setPerfis] = useState([]);
   const cid = cfg.clientes?.[0]?.id;
 
@@ -98,6 +198,7 @@ export default function Admin({ cfg, aoFechar, recarregar, aviso }) {
     const { data } = await supabase().from("perfis").select("id, usuario, nome, papel").order("usuario");
     setPerfis(data || []);
   }, []);
+
 
   useEffect(() => { carregaPerfis(); }, [carregaPerfis]);
 
@@ -116,20 +217,26 @@ export default function Admin({ cfg, aoFechar, recarregar, aviso }) {
           <button className="x" aria-label="Fechar" onClick={aoFechar}>×</button>
         </div>
         <div className="dw-b">
-          <div className="sec">
-            <h3>Pessoas</h3>
-            <p>Quem pode editar a pauta. Contas novas entram como <b>leitor</b> — promova aqui.</p>
-            {perfis.map((p) => (
-              <div className="arow" key={p.id}>
-                <input type="text" defaultValue={p.usuario} readOnly style={{ opacity: 0.75 }} />
-                <select className="f" value={p.papel} onChange={(e) => mudaPapel(p, e.target.value)}>
-                  <option value="leitor">leitor</option>
-                  <option value="editor">editor</option>
-                  <option value="admin">admin</option>
-                </select>
-              </div>
-            ))}
-          </div>
+          {ehAdmin && (
+            <div className="sec">
+              <h3>Pessoas</h3>
+              <p>
+                Contas novas entram como <b>leitor</b>. <b>Editor</b> mexe na pauta e nos cadastros
+                desta tela; <b>admin</b> acrescenta a isso mudar papéis e ver o histórico. Só admin
+                muda papel — a trava está no banco.
+              </p>
+              {perfis.map((p) => (
+                <div className="arow" key={p.id}>
+                  <input type="text" defaultValue={p.usuario} readOnly style={{ opacity: 0.75 }} />
+                  <select className="f" value={p.papel} onChange={(e) => mudaPapel(p, e.target.value)}>
+                    <option value="leitor">leitor</option>
+                    <option value="editor">editor</option>
+                    <option value="admin">admin</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
 
           <Secao titulo="Demandantes" tabela="demandantes" clienteId={cid}
             descricao="Quem pede. A lista aparece sempre em ordem alfabética, na grade e aqui."
@@ -174,6 +281,8 @@ export default function Admin({ cfg, aoFechar, recarregar, aviso }) {
               ))}
             </div>
           </div>
+
+          {ehAdmin && <Historico cfg={cfg} perfis={perfis} />}
 
           <div className="sec">
             <h3>Colunas</h3>

@@ -40,6 +40,9 @@ const CAMPO_ESFORCO = Deno.env.get("AZURE_CAMPO_ESFORCO") ?? "Microsoft.VSTS.Sch
 const CAMPO_CLIENTE = Deno.env.get("AZURE_CAMPO_CLIENTE") ?? "Custom.Campanha";
 const API = "7.1";
 
+/** Só interessa o tipo de card que vira pedido na pauta. */
+const TIPO_CARD = Deno.env.get("AZURE_TIPO_CARD") ?? "Criação";
+
 /** Estados que significam "acabou". Tudo que não está aqui conta como aberto. */
 const FINAIS = (Deno.env.get("AZURE_ESTADOS_FINAIS") ?? "Done,Closed,Resolved,Removed")
   .split(",").map((s) => s.trim()).filter(Boolean);
@@ -87,9 +90,13 @@ function resumo(item: any) {
 /** Ids de tudo que está aberto no projeto. */
 async function idsAbertos(): Promise<number[]> {
   const lista = FINAIS.map((s) => `'${s.replace(/'/g, "''")}'`).join(",");
+  const tipo = TIPO_CARD
+    ? `AND [System.WorkItemType] = '${TIPO_CARD.replace(/'/g, "''")}'`
+    : "";
   const wiql = `
     SELECT [System.Id] FROM WorkItems
     WHERE [System.TeamProject] = '${PROJETO}'
+      ${tipo}
       AND [System.State] NOT IN (${lista})
     ORDER BY [System.ChangedDate] DESC`;
   const url = `https://dev.azure.com/${ORG}/${encodeURIComponent(PROJETO)}/_apis/wit/wiql?api-version=${API}`;
@@ -157,7 +164,7 @@ Deno.serve(async (req) => {
 
     const ids = await idsAbertos();
     if (!ids.length) {
-      return responde({ abertos: 0, naPauta: 0, faltando: [], estadosFinais: FINAIS });
+      return responde({ abertos: 0, naPauta: 0, faltando: [], estadosFinais: FINAIS, tipo: TIPO_CARD });
     }
 
     // Quem já está na pauta sai da lista. A comparação é por lotes porque o
@@ -178,6 +185,7 @@ Deno.serve(async (req) => {
       naPauta: conhecidos.size,
       faltando: cards.map(resumo),
       estadosFinais: FINAIS,
+      tipo: TIPO_CARD,
     });
   } catch (e) {
     console.error("[azure-pendentes]", e);
