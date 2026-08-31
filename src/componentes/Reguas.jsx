@@ -61,7 +61,7 @@ function ChipStatus({ valor, aoMudar, desabilitado }) {
   );
 }
 
-export default function Reguas({ reguas, podeEditar, salvar, criar, remover, aviso }) {
+export default function Reguas({ reguas, clientes = [], podeEditar, salvar, criar, remover, aviso }) {
   const { larg, pegaBorda } = useLarguras(`${LS_LARGURAS}.reguas`);
   const [ordem, setOrdem] = useState({ campo: null, dir: "asc" });
   const [nova, setNova] = useState("");
@@ -75,7 +75,8 @@ export default function Reguas({ reguas, podeEditar, salvar, criar, remover, avi
   const lista = useMemo(() => {
     if (!ordem.campo) return reguas;
     const sinal = ordem.dir === "asc" ? 1 : -1;
-    const chave = (r) => (ordem.campo === "status" ? posRegua(r.status) : r.nome || "");
+    const chave = (r) =>
+      ordem.campo === "status" ? posRegua(r.status) : r[ordem.campo] || "";
     return reguas.slice().sort((a, b) => {
       const va = chave(a);
       const vb = chave(b);
@@ -93,11 +94,15 @@ export default function Reguas({ reguas, podeEditar, salvar, criar, remover, avi
 
   return (
     <div className="gridwrap">
+      <datalist id="clientes-pauta">
+        {clientes.map((c) => <option key={c} value={c} />)}
+      </datalist>
       <table className="grade" style={{ minWidth: total, width: "100%" }}>
         <Colunas colunas={COLUNAS_REGUAS} larg={larg} />
         <Cabecalhos colunas={COLUNAS_REGUAS} larg={larg} pegaBorda={pegaBorda} ordem={ordem} aoOrdenar={aoOrdenar} />
         <tbody>
           <tr className="novo">
+            <td />
             <td>
               <input
                 className="novo-pedido" placeholder="Nova régua" disabled={dis} value={nova}
@@ -112,11 +117,21 @@ export default function Reguas({ reguas, podeEditar, salvar, criar, remover, avi
                 title="Escreva o nome da régua e aperte Enter."
               />
             </td>
-            <td /><td /><td /><td />
+            <td /><td /><td />
           </tr>
 
           {lista.map((r) => (
             <tr key={r.id}>
+              <td>
+                {/* Régua não tem card: o cliente é escrito à mão, com sugestão
+                    dos nomes que já existem na pauta. */}
+                <input className="cell" type="text" placeholder="cliente" disabled={dis}
+                  list="clientes-pauta" defaultValue={r.cliente || ""} title={r.cliente || ""}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v !== (r.cliente || "")) guarda(() => salvar(r.id, { cliente: v || null }), "salvar o cliente");
+                  }} />
+              </td>
               <td>
                 <input className="cell" type="text" placeholder="nome da régua" disabled={dis}
                   defaultValue={r.nome || ""} title={r.nome || ""}

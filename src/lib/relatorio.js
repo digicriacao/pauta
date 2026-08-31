@@ -29,6 +29,7 @@ export function topN(dados, n = 7) {
 
 export function nomes(cfg) {
   return {
+    cli: (p) => p.campanha || "",
     rec: (p) =>
       cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to)?.nome_pauta || p.azure_assigned_to || "",
     dem: (p) => cfg.demandantes.find((d) => d.id === p.demandante_id)?.nome || "",
@@ -101,6 +102,7 @@ export function calcula(base, cfg) {
   }));
 
   const recursos = agrupa(base, nm.rec);
+  const clientes = agrupa(base, nm.cli);
 
   return {
     n,
@@ -129,6 +131,8 @@ export function calcula(base, cfg) {
 
     recursos,
     recursosTop: topN(recursos),
+    clientes,
+    clientesTop: topN(clientes),
     artesPorRecurso: topN(agrupa(base, nm.rec, (p) => p.qtd_artes ?? 1)),
     esforcoPorRecurso: topN(agrupa(base, nm.rec, (p) => Number(p.esforco) || 0)),
     demandantes: topN(agrupa(base, nm.dem)),

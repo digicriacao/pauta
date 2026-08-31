@@ -90,6 +90,21 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
         )}
       </td>
       <td>
+        {/* Cliente = campo Campanha do card. Só a linha sem card aceita digitar. */}
+        {rascunho ? (
+          <input className="cell" type="text" placeholder="cliente" disabled={dis}
+            defaultValue={p.campanha || ""} title="Enquanto não houver card, escreva o cliente à mão"
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== (p.campanha || "")) salvar(p.id, { campanha: v || null });
+            }} />
+        ) : p.campanha ? (
+          <div className="ro cliente" title={`Campanha no card: ${p.campanha}`}>{p.campanha}</div>
+        ) : (
+          <div className="ro empty">sem campanha</div>
+        )}
+      </td>
+      <td>
         <select className="cell" value={p.demandante_id ?? ""} disabled={dis}
           onChange={(e) => salvar(p.id, { demandante_id: e.target.value ? Number(e.target.value) : null })}>
           <option value=""></option>
@@ -105,7 +120,7 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
                 const v = e.target.value.trim();
                 if (v && v !== (p.titulo || "")) salvar(p.id, { titulo: v });
               }} />
-            <a className="abrir-card" href={urlNovoCard(p.titulo, cfg.cliente?.nome)}
+            <a className="abrir-card" href={urlNovoCard(p.titulo, p.campanha)}
                target="_blank" rel="noopener noreferrer"
                title="Abre o formulário de card novo no Azure, já com este título">
               ↗ card

@@ -32,6 +32,8 @@ const preflight = (req: Request) =>
 const ORG = Deno.env.get("AZURE_ORG") ?? "digidevs";
 const PROJETO = Deno.env.get("AZURE_PROJECT") ?? "SQUAD PULSE";
 const CAMPO_ENTREGA = Deno.env.get("AZURE_CAMPO_ENTREGA") ?? "Microsoft.VSTS.Scheduling.TargetDate";
+const CAMPO_ESFORCO = Deno.env.get("AZURE_CAMPO_ESFORCO") ?? "Microsoft.VSTS.Scheduling.Effort";
+const CAMPO_CLIENTE = Deno.env.get("AZURE_CAMPO_CLIENTE") ?? "Custom.Campanha";
 const API = "7.1";
 
 function cabecalhos(): HeadersInit {
@@ -79,6 +81,22 @@ function extraiPasta(descricaoHtml?: string) {
 
 const soData = (v: unknown) => (v ? String(v).slice(0, 10) : null);
 
+/** O Effort do card vem number, string ou vazio — a coluna aceita só número. */
+const numeroOuNulo = (v: unknown) => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+/** Picklist devolve texto; campo de identidade devolve objeto. Aceita os dois. */
+// deno-lint-ignore no-explicit-any
+const textoDoCampo = (v: any) => {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "string") return v.trim() || null;
+  if (typeof v === "object") return (v.displayName ?? v.name ?? v.value ?? null);
+  return String(v);
+};
+
 /** Achata o work item no formato que a tabela `pedidos` espera. */
 // deno-lint-ignore no-explicit-any
 function normaliza(item: any) {
@@ -92,6 +110,8 @@ function normaliza(item: any) {
     azure_changed_at: f["System.ChangedDate"] ?? null,
     data_solicitacao: soData(f["System.CreatedDate"]),
     data_entrega: soData(f[CAMPO_ENTREGA]),
+    esforco: numeroOuNulo(f[CAMPO_ESFORCO]),
+    campanha: textoDoCampo(f[CAMPO_CLIENTE]),
     pasta_codigo: pasta.codigo,
     pasta_url: pasta.url,
   };
@@ -105,20 +125,19 @@ async function buscaCard(id: number) {
   return await r.json();
 }
 
-/** Ids alterados desde `desde` (ISO). Filtra o cliente por tag ou por título. */
-async function idsAlterados(desde: string, cliente: string): Promise<number[]> {
-  const modo = Deno.env.get("AZURE_FILTRO_CLIENTE") ?? "titulo";
-  // Três jeitos de dizer "este card é da Prudential":
-  //   campo  → um campo próprio do card (ex.: Campanha) — o mais confiável
-  //   tag    → as Tags do work item
-  //   titulo → o marcador [Prudential] no título, como no Pulse v1
-  const campoCliente = Deno.env.get("AZURE_CAMPO_CLIENTE") ?? "Custom.Campanha";
-  const filtro =
-    modo === "campo"
-      ? `AND [${campoCliente}] CONTAINS '${cliente}'`
-      : modo === "tag"
-      ? `AND [System.Tags] CONTAINS '${cliente}'`
-      : `AND [System.Title] CONTAINS '[${cliente}]'`;
+/**
+ * Ids alterados desde `desde` (ISO).
+ *
+ * A pauta virou multicliente: em vez de uma consulta por cliente cadastrado,
+ * traz TODO o projeto e deixa o campo Campanha dizer de quem é cada card.
+ * Cliente novo aparece sozinho, sem ninguém precisar cadastrar nada antes.
+ *
+ * Para voltar ao recorte de um cliente só, preencha AZURE_FILTRO_CAMPANHA com
+ * o valor que a Campanha precisa conter.
+ */
+async function idsAlterados(desde: string): Promise<number[]> {
+  const soEsta = Deno.env.get("AZURE_FILTRO_CAMPANHA") ?? "";
+  const filtro = soEsta ? `AND [${CAMPO_CLIENTE}] CONTAINS '${soEsta.replace(/'/g, "''")}'` : "";
   const wiql = `
     SELECT [System.Id] FROM WorkItems
     WHERE [System.TeamProject] = '${PROJETO}'
@@ -164,9 +183,26 @@ async function buscaCardsEmLote(ids: number[]) {
  * plataforma e não são tocados — por isso não existe conflito.
  */
 const CAMPOS_DO_AZURE = [
-  "titulo", "azure_state", "azure_assigned_to", "azure_changed_at",
-  "data_solicitacao", "data_entrega", "pasta_codigo", "pasta_url",
+  "titulo", "campanha", "azure_state", "azure_assigned_to", "azure_changed_at",
+  "data_solicitacao", "data_entrega", "esforco", "pasta_codigo", "pasta_url",
 ] as const;
+
+/**
+ * Liga a campanha do card a um cliente cadastrado, quando existe um.
+ * Não achando, o pedido entra com cliente_id nulo e ainda assim aparece na
+ * grade com o nome da campanha — cadastrar o cliente é opcional, e serve só
+ * para dar apelido, cor e endereço da página pública.
+ */
+// deno-lint-ignore no-explicit-any
+function clienteDaCampanha(campanha: string | null, clientes: any[]) {
+  if (!campanha) return null;
+  const alvo = campanha.toLowerCase();
+  const bate = clientes.find((c) => {
+    const chaves = [c.tag_azure, c.nome, c.slug].filter(Boolean).map((x: string) => x.toLowerCase());
+    return chaves.some((k: string) => alvo.includes(k));
+  });
+  return bate?.id ?? null;
+}
 
 function admin() {
   return createClient(
@@ -215,9 +251,10 @@ Deno.serve(async (req) => {
   const resumo = { lidos: 0, criados: 0, atualizados: 0 };
 
   try {
+    // O cadastro de clientes deixou de ser pré-requisito: serve só para ligar
+    // a campanha a um cliente conhecido. Vazio, o sync roda igual.
     const { data: clientes } = await sb
-      .from("clientes").select("id, tag_azure").eq("ativo", true);
-    if (!clientes?.length) throw new Error("Nenhum cliente ativo cadastrado.");
+      .from("clientes").select("id, nome, slug, tag_azure").eq("ativo", true);
 
     const { data: ultimo } = await sb
       .from("sync_log").select("inicio")
@@ -229,11 +266,8 @@ Deno.serve(async (req) => {
       ultimo ? new Date(ultimo.inicio).getTime() - 2 * 3600e3 : Date.now() - 60 * 86400e3,
     ).toISOString();
 
-    for (const cliente of clientes) {
-      if (!cliente.tag_azure) continue;
-      const ids = await idsAlterados(desde, cliente.tag_azure);
-      if (!ids.length) continue;
-
+    const ids = await idsAlterados(desde);
+    if (ids.length) {
       const cards = await buscaCardsEmLote(ids);
       resumo.lidos += cards.length;
 
@@ -261,7 +295,11 @@ Deno.serve(async (req) => {
             });
           }
         } else {
-          novos.push({ cliente_id: cliente.id, azure_id: c.azure_id, ...campos });
+          novos.push({
+            cliente_id: clienteDaCampanha(c.campanha, clientes ?? []),
+            azure_id: c.azure_id,
+            ...campos,
+          });
         }
 
         await sb.from("azure_raw").upsert({

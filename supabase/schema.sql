@@ -77,10 +77,13 @@ create table if not exists recursos (
 -- ── pedidos ─────────────────────────────────────────────────────────────────
 create table if not exists pedidos (
   id uuid primary key default gen_random_uuid(),
-  cliente_id int not null references clientes,
+  -- opcional: só existe quando o cliente está cadastrado aqui. Quem manda no
+  -- nome que aparece na grade é `campanha`, que vem do card.
+  cliente_id int references clientes,
 
   -- colunas cujo dono é o Azure (o sync escreve, ninguém edita na grade)
   azure_id          int unique,
+  campanha          text,   -- campo Campanha do card = o cliente
   titulo            text,
   azure_state       text,
   azure_assigned_to text,
@@ -111,13 +114,15 @@ create table if not exists pedidos (
 create index if not exists pedidos_entrega_idx  on pedidos (data_entrega desc);
 create index if not exists pedidos_solic_idx    on pedidos (data_solicitacao desc);
 create index if not exists pedidos_cliente_idx  on pedidos (cliente_id);
+create index if not exists pedidos_campanha_idx on pedidos (campanha);
 
 -- ── réguas ──────────────────────────────────────────────────────────────────
 -- Área própria, à parte da pauta: cada linha é uma régua de comunicação, com
 -- um link (SharePoint, card ou documento Office) e um status próprio.
 create table if not exists reguas (
   id uuid primary key default gen_random_uuid(),
-  cliente_id int not null references clientes on delete cascade,
+  cliente_id int references clientes on delete cascade,
+  cliente     text,   -- escrito à mão: a régua não tem card de onde puxar
   nome        text,
   link        text,
   status      text not null default 'radar'
@@ -265,7 +270,8 @@ where c.slug='prudential' on conflict do nothing;
 insert into recursos (nome_azure, nome_pauta, area) values
   ('Vinicius','Vini','DA'), ('Gabriela','Gabi','DA'), ('Rodrigo','Rodrigo','DA'),
   ('YVE','YVE','DA'), ('Bruna','Bruna','Motion'), ('ELA','ELA','Redação'),
-  ('Michele','Michele','Redação'), ('André','André','Redação')
+  ('Michele','Michele','Redação'), ('André','André','Redação'),
+  ('Letícia','Letícia','DA')
 on conflict (nome_azure) do nothing;
 
 -- ── depois de criar seu primeiro usuário pelo app, vire admin: ──────────────
@@ -281,16 +287,21 @@ on conflict (nome_azure) do nothing;
 --
 -- BLOCO 1 — obrigatório: cria a visão e libera para o público.
 
-create or replace view pauta_cliente as
+-- `create or replace` só acrescenta coluna no fim; como `campanha` entra no
+-- meio, o Postgres entenderia como renomear `entrada`. Derrubar e recriar é o
+-- caminho — nada depende desta visão além da página do cliente.
+drop view if exists pauta_cliente;
+create view pauta_cliente as
 select
-  c.slug              as cliente,
+  coalesce(c.slug, lower(regexp_replace(coalesce(p.campanha,''), '[^a-zA-Z0-9]+', '-', 'g'))) as cliente,
+  p.campanha          as campanha,
   p.data_solicitacao  as entrada,
   d.nome              as demandante,
   p.titulo            as pedido,
   p.entrega_em        as entrega_em,
   p.data_entrega      as data_entrega
 from pedidos p
-join clientes c on c.id = p.cliente_id
+left join clientes c on c.id = p.cliente_id
 left join demandantes d on d.id = p.demandante_id
 left join status_internos si on si.id = p.status_interno_id
 where coalesce(p.entrega_em::date, p.data_entrega)
@@ -386,7 +397,11 @@ begin
 end $$;
 
 -- A visão do cliente passa a esconder o que foi cancelado:
-create or replace view pauta_cliente as
+-- `create or replace` só acrescenta coluna no fim; como `campanha` entra no
+-- meio, o Postgres entenderia como renomear `entrada`. Derrubar e recriar é o
+-- caminho — nada depende desta visão além da página do cliente.
+drop view if exists pauta_cliente;
+create view pauta_cliente as
 select
   c.slug              as cliente,
   p.data_solicitacao  as entrada,
@@ -396,6 +411,48 @@ select
   p.data_entrega      as data_entrega
 from pedidos p
 join clientes c on c.id = p.cliente_id
+left join demandantes d on d.id = p.demandante_id
+left join status_internos si on si.id = p.status_interno_id
+where coalesce(p.entrega_em::date, p.data_entrega)
+      between current_date and current_date + 7
+  and coalesce(si.cancelamento, false) = false;
+
+alter view pauta_cliente set (security_invoker = off);
+revoke all on pauta_cliente from anon, authenticated;
+grant select on pauta_cliente to anon, authenticated;
+
+-- ── vários clientes na mesma pauta ──────────────────────────────────────────
+-- O cliente deixa de ser um cadastro obrigatório e passa a vir do campo
+-- Campanha do card. `clientes` continua existindo, mas só para dar apelido,
+-- cor e o endereço da página pública de cada um.
+
+alter table pedidos alter column cliente_id drop not null;
+alter table pedidos add column if not exists campanha text;
+create index if not exists pedidos_campanha_idx on pedidos (campanha);
+
+alter table reguas alter column cliente_id drop not null;
+alter table reguas add column if not exists cliente text;
+
+insert into recursos (nome_azure, nome_pauta, area) values ('Letícia','Letícia','DA')
+on conflict (nome_azure) do nothing;
+
+-- A visão do cliente passa a devolver a campanha, que é como a página pública
+-- separa um cliente do outro.
+-- `create or replace` só acrescenta coluna no fim; como `campanha` entra no
+-- meio, o Postgres entenderia como renomear `entrada`. Derrubar e recriar é o
+-- caminho — nada depende desta visão além da página do cliente.
+drop view if exists pauta_cliente;
+create view pauta_cliente as
+select
+  coalesce(c.slug, lower(regexp_replace(coalesce(p.campanha,''), '[^a-zA-Z0-9]+', '-', 'g'))) as cliente,
+  p.campanha          as campanha,
+  p.data_solicitacao  as entrada,
+  d.nome              as demandante,
+  p.titulo            as pedido,
+  p.entrega_em        as entrega_em,
+  p.data_entrega      as data_entrega
+from pedidos p
+left join clientes c on c.id = p.cliente_id
 left join demandantes d on d.id = p.demandante_id
 left join status_internos si on si.id = p.status_interno_id
 where coalesce(p.entrega_em::date, p.data_entrega)

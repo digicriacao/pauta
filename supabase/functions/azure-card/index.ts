@@ -32,6 +32,7 @@ const preflight = (req: Request) =>
 const ORG = Deno.env.get("AZURE_ORG") ?? "digidevs";
 const PROJETO = Deno.env.get("AZURE_PROJECT") ?? "SQUAD PULSE";
 const CAMPO_ENTREGA = Deno.env.get("AZURE_CAMPO_ENTREGA") ?? "Microsoft.VSTS.Scheduling.TargetDate";
+const CAMPO_ESFORCO = Deno.env.get("AZURE_CAMPO_ESFORCO") ?? "Microsoft.VSTS.Scheduling.Effort";
 const API = "7.1";
 
 function cabecalhos(): HeadersInit {
@@ -79,6 +80,22 @@ function extraiPasta(descricaoHtml?: string) {
 
 const soData = (v: unknown) => (v ? String(v).slice(0, 10) : null);
 
+/** O Effort do card vem number, string ou vazio — a coluna aceita só número. */
+const numeroOuNulo = (v: unknown) => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+/** Picklist devolve texto; campo de identidade devolve objeto. Aceita os dois. */
+// deno-lint-ignore no-explicit-any
+const textoDoCampo = (v: any) => {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "string") return v.trim() || null;
+  if (typeof v === "object") return (v.displayName ?? v.name ?? v.value ?? null);
+  return String(v);
+};
+
 /** Achata o work item no formato que a tabela `pedidos` espera. */
 // deno-lint-ignore no-explicit-any
 function normaliza(item: any) {
@@ -92,6 +109,8 @@ function normaliza(item: any) {
     azure_changed_at: f["System.ChangedDate"] ?? null,
     data_solicitacao: soData(f["System.CreatedDate"]),
     data_entrega: soData(f[CAMPO_ENTREGA]),
+    esforco: numeroOuNulo(f[CAMPO_ESFORCO]),
+    campanha: textoDoCampo(f[Deno.env.get("AZURE_CAMPO_CLIENTE") ?? "Custom.Campanha"]),
     pasta_codigo: pasta.codigo,
     pasta_url: pasta.url,
   };

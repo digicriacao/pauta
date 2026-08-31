@@ -7,7 +7,7 @@ import { calcula, nomes, situacaoDe } from "@/lib/relatorio";
 import { BarrasV, BarrasH, BarraSituacao, BarrasEmpilhadas, LinhaAcumulada, Legenda } from "./Graficos";
 
 const TODOS = BLOCOS_RELATORIO.map((b) => b.id);
-const VAZIO = { dem: "", tipo: "", status: "", rec: "", de: "", ate: "", parados: true, cancelados: true };
+const VAZIO = { cli: "", dem: "", tipo: "", status: "", rec: "", de: "", ate: "", parados: true, cancelados: true };
 
 export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
   const [f, setF] = useState(VAZIO);
@@ -44,6 +44,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
         if (sit === "parado" && !f.parados) return false;
         if (sit === "cancelado" && !f.cancelados) return false;
         return (
+          (!f.cli || nm.cli(p) === f.cli) &&
           (!f.dem || nm.dem(p) === f.dem) &&
           (!f.tipo || nm.tipo(p) === f.tipo) &&
           (!f.status || nm.st(p) === f.status) &&
@@ -70,10 +71,11 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
       dados.forEach((l) => linhas.push(l));
     };
 
-    linhas.push([`Relatório da pauta · ${cfg.cliente?.nome || ""} · ${mesSel}`]);
+    linhas.push([`Relatório da pauta · ${f.cli || "todos os clientes"} · ${mesSel}`]);
     linhas.push([`${d.n} pedidos no recorte`, `filtros: ${resumoFiltros() || "nenhum"}`]);
 
     if (tem("kpis")) secao("Indicadores", ["Indicador", "Valor", "Detalhe"], indicadores().map((k) => [k.k, k.v, k.s]));
+    if (tem("cliente")) secao("Pedidos por cliente", ["Cliente", "Pedidos"], d.clientes.map((x) => [x.rot, x.v]));
     if (tem("situacao")) secao("Situação do recorte", ["Situação", "Pedidos", "%"], d.situacao.map((s) => [s.rot, s.v, `${s.pct}%`]));
     if (tem("dia")) secao("Entregas por dia", ["Dia", "Previstas", "Entregues"], d.porDia.map((x) => [x.rot, x.v, x.entregues]));
     if (tem("acumulado")) secao("Curva acumulada", ["Dia", "Previsto acumulado", "Entregue acumulado"], d.acumulado.map((x) => [x.rot, x.previsto, x.entregue]));
@@ -85,6 +87,13 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
     if (tem("status")) secao("Status interno", ["Status", "Pedidos"], d.porStatus.map((x) => [x.rot, x.v]));
     if (tem("atrito")) secao("Parados e cancelados por demandante", ["Demandante", "Parados", "Cancelados"], d.atritoDem.map((x) => [x.rot, x.valores[0], x.valores[1]]));
 
+    if (tem("tabCliente")) {
+      secao("Resumo por cliente", ["Cliente", "Pedidos", "Artes", "Esforço", "Entregues", "Parados", "Cancelados", "% do recorte"],
+        d.clientes.map((c) => {
+          const l = linhaCliente(c);
+          return [l.rot, l.pedidos, l.artes, l.esforco, l.entregues, l.parados, l.cancelados, `${l.pct}%`];
+        }));
+    }
     if (tem("tabRecurso")) {
       secao("Resumo por recurso", ["Recurso", "Pedidos", "Artes", "Esforço", "Ajustes", "Entregues", "Parados", "Cancelados", "% do recorte"],
         d.recursos.map((r) => {
@@ -93,19 +102,19 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
         }));
     }
     if (tem("tabParados")) {
-      secao("Parados", ["Solicitação", "Card", "Demandante", "Pedido", "Motivo da pausa"],
-        d.porSituacao.parado.map((p) => [fmtBRL(p.data_solicitacao), p.azure_id ? "#" + p.azure_id : "", nm.dem(p), p.titulo, p.motivo_pausa || ""]));
+      secao("Parados", ["Solicitação", "Card", "Cliente", "Demandante", "Pedido", "Motivo da pausa"],
+        d.porSituacao.parado.map((p) => [fmtBRL(p.data_solicitacao), p.azure_id ? "#" + p.azure_id : "", nm.cli(p), nm.dem(p), p.titulo, p.motivo_pausa || ""]));
     }
     if (tem("tabCancel")) {
-      secao("Cancelados", ["Solicitação", "Card", "Demandante", "Pedido", "Motivo do cancelamento"],
-        d.porSituacao.cancelado.map((p) => [fmtBRL(p.data_solicitacao), p.azure_id ? "#" + p.azure_id : "", nm.dem(p), p.titulo, p.motivo_cancelamento || ""]));
+      secao("Cancelados", ["Solicitação", "Card", "Cliente", "Demandante", "Pedido", "Motivo do cancelamento"],
+        d.porSituacao.cancelado.map((p) => [fmtBRL(p.data_solicitacao), p.azure_id ? "#" + p.azure_id : "", nm.cli(p), nm.dem(p), p.titulo, p.motivo_cancelamento || ""]));
     }
     if (tem("tabDetalhe")) {
       secao("Planilha detalhada",
-        ["Solicitação","Card","Pasta","Demandante","Pedido","Artes","Esforço","Tipo","Entrega","Azure","Interno","Entrega combinada","Entregue","Recurso","Obs","Motivo da pausa","Motivo do cancelamento"],
+        ["Solicitação","Card","Pasta","Cliente","Demandante","Pedido","Artes","Esforço","Tipo","Entrega","Azure","Interno","Entrega combinada","Entregue","Recurso","Obs","Motivo da pausa","Motivo do cancelamento"],
         base.map((p) => [
           fmtBRL(p.data_solicitacao), p.azure_id ? "#" + p.azure_id : "", p.pasta_codigo || "",
-          nm.dem(p), p.titulo, p.qtd_artes ?? 1, p.esforco ?? "", nm.tipo(p), fmtBRL(p.data_entrega),
+          nm.cli(p), nm.dem(p), p.titulo, p.qtd_artes ?? 1, p.esforco ?? "", nm.tipo(p), fmtBRL(p.data_entrega),
           p.azure_state || "", nm.st(p), p.entrega_em || "", p.entregue ? "sim" : "não",
           nm.rec(p), p.observacao || "", p.motivo_pausa || "", p.motivo_cancelamento || "",
         ]));
@@ -136,6 +145,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
 
   function resumoFiltros() {
     const p = [];
+    if (f.cli) p.push(`cliente ${f.cli}`);
     if (f.dem) p.push(`demandante ${f.dem}`);
     if (f.tipo) p.push(`tipo ${f.tipo}`);
     if (f.status) p.push(`status ${f.status}`);
@@ -159,7 +169,22 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
       { k: "Prazo médio", v: d.prazoMedio === null ? "—" : `${d.prazoMedio}d`, s: "da solicitação à entrega" },
       { k: "Dia mais cheio", v: d.pico.v, s: d.pico.rot },
       { k: "Pessoas envolvidas", v: d.recursos.length, s: `${d.demandantesTodos.length} demandantes` },
+      { k: "Clientes no recorte", v: d.clientes.length, s: d.clientes[0] ? `maior: ${d.clientes[0].rot}` : "—" },
     ];
+  }
+
+  function linhaCliente(c) {
+    const cs = base.filter((p) => nm.cli(p) === c.rot);
+    return {
+      rot: c.rot,
+      pedidos: c.v,
+      artes: cs.reduce((s, p) => s + (p.qtd_artes ?? 1), 0),
+      esforco: cs.reduce((s, p) => s + (Number(p.esforco) || 0), 0),
+      entregues: cs.filter((p) => situacaoDe(p, cfg) === "entregue").length,
+      parados: cs.filter((p) => situacaoDe(p, cfg) === "parado").length,
+      cancelados: cs.filter((p) => situacaoDe(p, cfg) === "cancelado").length,
+      pct: d.pct(c.v, n),
+    };
   }
 
   function linhaRecurso(r) {
@@ -193,6 +218,10 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
   return (
     <section>
       <div className="relbar">
+        <select className="f" value={f.cli} onChange={set("cli")}>
+          <option value="">Cliente</option>
+          {d.clientes.map((c) => <option key={c.rot}>{c.rot}</option>)}
+        </select>
         <select className="f" value={f.dem} onChange={set("dem")}>
           <option value="">Demandante</option>
           {cfg.demandantes.map((x) => <option key={x.id}>{x.nome}</option>)}
@@ -274,6 +303,13 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
       )}
 
       <div className="charts">
+        <Cartao id="cliente" titulo="Pedidos por cliente" sub="como o mês se reparte entre as contas" largo>
+          {listaOuVazio(d.clientesTop, <>
+            <Legenda itens={d.clientesTop.map((x) => x.rot)} cores={PALETA} />
+            <BarrasH dados={d.clientesTop} cores={PALETA} dica={dica} unidade="pedidos" />
+          </>, "Nenhum card do recorte tem Campanha preenchida.")}
+        </Cartao>
+
         <Cartao id="situacao" titulo="Situação do recorte" sub="como o mês está fechando" largo>
           {listaOuVazio(base, <BarraSituacao partes={d.situacao} dica={dica} />)}
         </Cartao>
@@ -331,6 +367,43 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
         </Cartao>
       </div>
 
+      {tem("tabCliente") && (
+        <div className="card">
+          <div className="ch-h"><h3>Resumo por cliente</h3><span className="sub">de quem é o mês</span></div>
+          <table className="res">
+            <thead>
+              <tr>
+                <th>Cliente</th><th className="num">Pedidos</th><th className="num">Artes</th>
+                <th className="num">Esforço</th><th className="num">Entregues</th>
+                <th className="num">Parados</th><th className="num">Cancelados</th>
+                <th className="num">% do recorte</th><th style={{ width: 130 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {d.clientes.map((c) => {
+                const l = linhaCliente(c);
+                return (
+                  <tr key={l.rot}>
+                    <td>{l.rot}</td>
+                    <td className="num">{l.pedidos}</td>
+                    <td className="num">{l.artes}</td>
+                    <td className="num">{l.esforco || "—"}</td>
+                    <td className="num">{l.entregues}</td>
+                    <td className="num">{l.parados || "—"}</td>
+                    <td className="num">{l.cancelados || "—"}</td>
+                    <td className="num">{l.pct}%</td>
+                    <td><span className="bar-inline" style={{ width: `${Math.max(2, l.pct)}%` }} /></td>
+                  </tr>
+                );
+              })}
+              {!d.clientes.length && (
+                <tr><td colSpan={9}><p className="nada">Nenhum card do recorte tem Campanha preenchida.</p></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {tem("tabRecurso") && (
         <div className="card">
           <div className="ch-h"><h3>Resumo por recurso</h3><span className="sub">a mesma base em tabela</span></div>
@@ -384,6 +457,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
               <thead>
                 <tr>
                   <th style={{ width: 110 }}>Solicitação</th><th style={{ width: 110 }}>Card</th>
+                  <th style={{ width: 140 }}>Cliente</th>
                   <th style={{ width: 150 }}>Demandante</th><th>Pedido</th>
                   <th>{parados ? "Motivo da pausa" : "Motivo do cancelamento"}</th>
                 </tr>
@@ -393,6 +467,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
                   <tr key={p.id}>
                     <td className="mono">{fmtBR(p.data_solicitacao)}</td>
                     <td className="mono">{p.azure_id ? `#${p.azure_id}` : "—"}</td>
+                    <td>{nm.cli(p) || "—"}</td>
                     <td>{nm.dem(p) || "—"}</td>
                     <td>{p.titulo}</td>
                     <td className={(p[campo] || "").trim() ? "" : "sem-motivo"}>
@@ -401,7 +476,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
                   </tr>
                 ))}
                 {!itens.length && (
-                  <tr><td colSpan={5}><p className="nada">Nada {parados ? "parado" : "cancelado"} no recorte.</p></td></tr>
+                  <tr><td colSpan={6}><p className="nada">Nada {parados ? "parado" : "cancelado"} no recorte.</p></td></tr>
                 )}
               </tbody>
             </table>

@@ -4,7 +4,7 @@ import { NOME_MES } from "@/lib/formato";
 import { BASE } from "@/lib/constantes";
 
 export default function Cabecalho({
-  cliente, meses, mesAtual, mesSel, setMesSel, contaMes,
+  meses, mesAtual, mesSel, setMesSel, contaMes,
   perfil, podeEditar, ehAdmin, aoLogin, aoAdmin, vista, setVista,
 }) {
   const i = meses.indexOf(mesAtual);
@@ -32,8 +32,6 @@ export default function Cabecalho({
           <img className="logo logo-dark" src={`${BASE}/logo-claro.png`} alt="Digi" width="90" height="25" />
           <span className="brand-name">Pauta</span>
         </div>
-        <div className="client"><b>{cliente?.nome || "—"}</b></div>
-
         <div className="meses">
           <span className="ano">{mesSel.slice(0, 4)}</span>
           {anteriores.length > 0 && (
@@ -77,6 +75,14 @@ export default function Cabecalho({
           onClick={() => setVista(vista === "rel" ? "pauta" : "rel")}
         >
           {vista === "rel" ? "← Voltar à pauta" : "📊 Relatórios"}
+        </button>
+
+        <button
+          className={`hbtn ${vista === "azure" ? "on" : ""}`}
+          onClick={() => setVista(vista === "azure" ? "pauta" : "azure")}
+          title="Cards abertos no Azure que não estão na pauta"
+        >
+          {vista === "azure" ? "← Voltar à pauta" : "⚖ Azure"}
         </button>
 
         <button className="hbtn ico" onClick={trocaTema} title="Alternar tema" aria-label="Alternar tema">◐</button>

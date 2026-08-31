@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase-browser";
  * ações de escrita. Tudo passa por RLS: leitor consegue ler, só editor grava.
  */
 export function useDados() {
-  const [cfg, setCfg] = useState({ cliente: null, demandantes: [], tipos: [], status: [], recursos: [] });
+  const [cfg, setCfg] = useState({ clientes: [], demandantes: [], tipos: [], status: [], recursos: [] });
   const [pedidos, setPedidos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
@@ -23,25 +23,23 @@ export function useDados() {
     }
     try {
       const [cli, dem, tip, sts, rec] = await Promise.all([
-        sb.from("clientes").select("*").eq("ativo", true).order("id").limit(1).maybeSingle(),
+        sb.from("clientes").select("*").eq("ativo", true).order("nome"),
         sb.from("demandantes").select("*").eq("ativo", true).order("nome"),
         sb.from("tipos").select("*").order("ordem"),
         sb.from("status_internos").select("*").order("ordem"),
         sb.from("recursos").select("*").order("nome_pauta"),
       ]);
-      const cliente = cli.data || null;
-      if (!cliente) throw new Error("Nenhum cliente cadastrado. Rode supabase/schema.sql.");
-
+      // A pauta virou multicliente: carrega tudo e deixa o filtro separar.
+      // O cadastro de clientes é opcional — serve para apelido, cor e link.
       const { data: peds, error } = await sb
         .from("pedidos")
         .select("*")
-        .eq("cliente_id", cliente.id)
         .order("data_solicitacao", { ascending: false });
       if (error) throw error;
 
       if (!montado.current) return;
       setCfg({
-        cliente,
+        clientes: cli.data || [],
         demandantes: dem.data || [],
         tipos: tip.data || [],
         status: sts.data || [],
@@ -132,24 +130,22 @@ export function useDados() {
  * Réguas. Tabela própria, fora da pauta: nada aqui vem do Azure, então não há
  * sync nem conflito — o que a pessoa escreve é o que fica.
  */
-export function useReguas(clienteId) {
+export function useReguas() {
   const [reguas, setReguas] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
   const carregar = useCallback(async () => {
     const sb = supabase();
-    if (!sb || !clienteId) return setCarregando(false);
-    const { data } = await sb
-      .from("reguas").select("*").eq("cliente_id", clienteId)
-      .order("ordem").order("criado_em");
+    if (!sb) return setCarregando(false);
+    const { data } = await sb.from("reguas").select("*").order("ordem").order("criado_em");
     setReguas(data || []);
     setCarregando(false);
-  }, [clienteId]);
+  }, []);
 
   useEffect(() => {
     carregar();
     const sb = supabase();
-    if (!sb || !clienteId) return;
+    if (!sb) return;
     const canal = sb
       .channel("reguas-ao-vivo")
       .on("postgres_changes", { event: "*", schema: "public", table: "reguas" }, (ev) => {
@@ -164,7 +160,7 @@ export function useReguas(clienteId) {
       })
       .subscribe();
     return () => sb.removeChannel(canal);
-  }, [carregar, clienteId]);
+  }, [carregar]);
 
   const salvarRegua = useCallback(async (id, campos) => {
     const sb = supabase();
@@ -185,15 +181,15 @@ export function useReguas(clienteId) {
     return {};
   }, []);
 
-  const criarRegua = useCallback(async (nome) => {
+  const criarRegua = useCallback(async (nome, cliente = null) => {
     const sb = supabase();
     if (!sb) return { erro: "Sem conexão." };
     const { data, error } = await sb
-      .from("reguas").insert({ cliente_id: clienteId, nome, status: "radar" }).select().single();
+      .from("reguas").insert({ nome, cliente, status: "radar" }).select().single();
     if (error) return { erro: error.message };
     setReguas((atual) => (atual.some((r) => r.id === data.id) ? atual : [...atual, data]));
     return { regua: data };
-  }, [clienteId]);
+  }, []);
 
   const removerRegua = useCallback(async (id) => {
     const sb = supabase();

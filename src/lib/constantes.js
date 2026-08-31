@@ -5,9 +5,10 @@
  *  dirPadrao — como a coluna ordena na primeira vez que é clicada.
  */
 export const COLUNAS = [
-  { id: "data_solicitacao",  rotulo: "📅 Solicitação", largura: 134, dono: "azure+app", ord: "data_solicitacao",  dirPadrao: "desc" },
+  { id: "data_solicitacao",  rotulo: "📅 Solicitação", largura: 142, dono: "azure+app", ord: "data_solicitacao",  dirPadrao: "desc" },
   { id: "azure_id",          rotulo: "Link Azure",     largura: 130, dono: "app"   },
   { id: "pasta_codigo",      rotulo: "📁",             largura: 96,  dono: "azure" },
+  { id: "campanha",          rotulo: "Cliente",        largura: 138, dono: "azure", ord: "campanha",           dirPadrao: "asc", dica: "Vem do campo Campanha do card" },
   { id: "demandante_id",     rotulo: "Demandante",     largura: 134, dono: "app",   ord: "demandante",         dirPadrao: "asc"  },
   { id: "titulo",            rotulo: "Pedido",         largura: 304, dono: "azure" },
   { id: "qtd_artes",         rotulo: "🎨",             largura: 74,  dono: "app",   ord: "qtd_artes",          dirPadrao: "desc", dica: "Quantidade de artes" },
@@ -54,7 +55,8 @@ export const PALETA = ["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5
 /* ── Réguas ─────────────────────────────────────────────────────────────────
    Área separada da pauta. Nada aqui vem do Azure: tudo é escrito à mão. */
 export const COLUNAS_REGUAS = [
-  { id: "nome",       rotulo: "Régua",  largura: 360, ord: "nome",   dirPadrao: "asc" },
+  { id: "cliente",    rotulo: "Cliente", largura: 160, ord: "cliente", dirPadrao: "asc" },
+  { id: "nome",       rotulo: "Régua",  largura: 340, ord: "nome",   dirPadrao: "asc" },
   { id: "link",       rotulo: "Link",   largura: 300 },
   { id: "status",     rotulo: "Status", largura: 190, ord: "status", dirPadrao: "asc" },
   { id: "observacao", rotulo: "📝 Obs", largura: 320 },
@@ -83,6 +85,7 @@ export const posRegua = (id) => {
 const COLUNAS_FILA = [
   { id: "data_solicitacao",  rotulo: "📅 Solicitação", largura: 130, ord: "data_solicitacao", dirPadrao: "desc" },
   { id: "azure_id",          rotulo: "Link Azure",     largura: 128 },
+  { id: "campanha",          rotulo: "Cliente",        largura: 138, ord: "campanha", dirPadrao: "asc" },
   { id: "demandante_id",     rotulo: "Demandante",     largura: 150, ord: "demandante", dirPadrao: "asc" },
   { id: "titulo",            rotulo: "Pedido",         largura: 340 },
   { id: "status_interno_id", rotulo: "🟠 Interno",     largura: 180 },
@@ -131,6 +134,7 @@ export const colunasFila = (fila) => [
    para o arquivo nunca discordar do que estava sendo visto. */
 export const BLOCOS_RELATORIO = [
   { id: "kpis",       grupo: "Topo",     nome: "Indicadores" },
+  { id: "cliente",    grupo: "Gráficos", nome: "Pedidos por cliente" },
   { id: "situacao",   grupo: "Gráficos", nome: "Situação do recorte" },
   { id: "dia",        grupo: "Gráficos", nome: "Entregas por dia" },
   { id: "acumulado",  grupo: "Gráficos", nome: "Curva acumulada" },
@@ -141,6 +145,7 @@ export const BLOCOS_RELATORIO = [
   { id: "tipo",       grupo: "Gráficos", nome: "Distribuição por tipo" },
   { id: "status",     grupo: "Gráficos", nome: "Status interno" },
   { id: "atrito",     grupo: "Gráficos", nome: "Parados e cancelados por demandante" },
+  { id: "tabCliente", grupo: "Tabelas",  nome: "Resumo por cliente" },
   { id: "tabRecurso", grupo: "Tabelas",  nome: "Resumo por recurso" },
   { id: "tabParados", grupo: "Tabelas",  nome: "Lista de parados" },
   { id: "tabCancel",  grupo: "Tabelas",  nome: "Lista de cancelados" },
@@ -148,6 +153,12 @@ export const BLOCOS_RELATORIO = [
 ];
 
 export const GRUPOS_BLOCOS = ["Topo", "Gráficos", "Tabelas"];
+
+/* ── Medidor de esforço do dia ──────────────────────────────────────────────
+   As quatro pessoas que aparecem no painel do topo. O nome é comparado sem
+   acento e sem caixa, contra o nome do Azure e contra o apelido da pauta —
+   assim "Vinicius", "Vinícius" e "Vini" caem na mesma pessoa. */
+export const MEDIDOR_RECURSOS = ["André", "Letícia", "Gabriela", "Vinicius"];
 
 export const LS_BLOCOS = "pauta.v2.blocos";
 export const LS_LARGURAS = "pauta.v2.larguras";

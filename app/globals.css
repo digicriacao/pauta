@@ -477,3 +477,52 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
   .kpis-rel{grid-template-columns:repeat(2,1fr)}
   .blocos-pop{left:auto;right:0}
 }
+
+/* ============================================================================
+   Vários clientes: topo com medidor, coluna e chip de cliente
+   ============================================================================ */
+
+/* indicadores mais estreitos, com o medidor de esforço encostado à direita */
+.topo{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:stretch;margin:16px 0}
+.topo .kpis{margin:0}
+.topo .kpi{padding:10px 12px;justify-content:center}
+.topo .kpi .v{font-size:20px}
+.topo .kpi .k{font-size:9.5px;letter-spacing:.1em}
+.topo .kpi .s{font-size:11px}
+
+.medidor{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:11px 13px 9px;display:flex;flex-direction:column;gap:8px}
+.med-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.med-h .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.med-total{font-size:19px;font-weight:600;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+.med-lista{display:flex;flex-direction:column;gap:6px;flex:1;justify-content:center}
+.med-row{display:grid;grid-template-columns:62px 1fr 26px;align-items:center;gap:8px}
+.med-nome{font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.med-tri{display:block;height:8px;border-radius:4px;background:var(--surface-3);overflow:hidden}
+.med-tri i{display:block;height:100%;border-radius:4px;background:var(--accent);min-width:3px}
+.med-tri i.zero{background:var(--line-strong);width:0!important}
+.med-num{font-size:12.5px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.med-pe{font-size:10.5px;color:var(--faint);line-height:1.3}
+
+/* o nome do cliente na grade: some do jeito que um dado de leitura deve sumir */
+.ro.cliente{justify-content:center;font-size:12px;color:var(--ink-2)}
+
+@media (max-width:1100px){
+  .topo{grid-template-columns:1fr}
+  .medidor{order:-1}
+}
+
+/* ============================================================================
+   Confronto Azure × pauta
+   ============================================================================ */
+
+.conf-topo{display:flex;align-items:stretch;gap:12px;margin:16px 0}
+.conf-topo .kpis-conf{flex:1;grid-template-columns:repeat(3,1fr);margin:0}
+.conf-topo>.hbtn{align-self:center;flex:none}
+.kpi.kpi-alerta .v{color:var(--alerta)}
+.kpi.kpi-alerta{box-shadow:inset 3px 0 0 var(--alerta)}
+
+.conf-tipo{font-size:11px;color:var(--muted)}
+.conf-sem{color:var(--faint);font-style:italic}
+.res .azchip{margin:0;justify-content:flex-start}
+.conf-trazer{height:26px;padding:0 10px;font-size:12px}

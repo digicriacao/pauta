@@ -15,18 +15,20 @@ import Admin from "./Admin";
 import Relatorios from "./Relatorios";
 import Reguas from "./Reguas";
 import Fila from "./Fila";
+import Medidor from "./Medidor";
+import Confronto from "./Confronto";
 
 export default function Pauta() {
   const { cfg, pedidos, carregando, erro, recarregar, salvarCampo, criarPedido, removerPedido } = useDados();
   const { perfil, podeEditar, ehAdmin, recarregar: relerSessao, sair } = useSessao();
 
-  const { reguas, salvarRegua, criarRegua, removerRegua } = useReguas(cfg.cliente?.id);
+  const { reguas, salvarRegua, criarRegua, removerRegua } = useReguas();
 
   const [mesSel, setMesSel] = useState(() => hojeISO().slice(0, 7));
   const [vista, setVista] = useState("pauta");
   // Dentro da pauta ainda há três áreas: a grade, as réguas e os cancelados.
   const [area, setArea] = useState("pauta");
-  const [filtros, setFiltros] = useState({ dem: "", tipo: "", status: "", rec: "", q: "" });
+  const [filtros, setFiltros] = useState({ cli: "", dem: "", tipo: "", status: "", rec: "", q: "" });
   const [ordem, setOrdem] = useState(ORDEM_PADRAO);
   const [foco, setFoco] = useState(null);
   const [salvandoFoco, setSalvandoFoco] = useState(false);
@@ -85,6 +87,12 @@ export default function Pauta() {
   const meses = useMemo(() => mesesDoAno(hojeISO().slice(0, 7)), []);
   const contaMes = useCallback((ym) => pedidos.filter((p) => mesDe(p) === ym).length, [pedidos]);
 
+  /** Os clientes que existem de fato na pauta — a campanha dos cards. */
+  const clientes = useMemo(
+    () => [...new Set(pedidos.map((p) => p.campanha).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt")),
+    [pedidos]
+  );
+
   const nomeRec = useCallback(
     (p) => cfg.recursos.find((r) => r.nome_azure === p.azure_assigned_to)?.nome_pauta || p.azure_assigned_to || "",
     [cfg.recursos]
@@ -135,6 +143,7 @@ export default function Pauta() {
         const tipo = cfg.tipos.find((t) => t.id === p.tipo_id)?.nome || "";
         const st = cfg.status.find((s) => s.id === p.status_interno_id)?.nome || "";
         return (
+          (!filtros.cli || (p.campanha || "") === filtros.cli) &&
           (!filtros.dem || dem === filtros.dem) &&
           (!filtros.tipo || tipo === filtros.tipo) &&
           (!filtros.status || st === filtros.status) &&
@@ -187,9 +196,9 @@ export default function Pauta() {
   async function iniciarPedido(nome) {
     if (!podeEditar) return setMostraLogin(true);
     const { erro: e } = await criarPedido({
-      cliente_id: cfg.cliente.id,
       titulo: nome,
       data_solicitacao: hojeISO(),
+      campanha: filtros.cli || null,   // filtrando por um cliente, já entra nele
     });
     if (e) return aviso(`Não deu para criar o pedido: ${e}`);
     aviso(`“${nome}” entrou na pauta sem card. Abra o card no Azure e cole o link aqui.`);
@@ -219,6 +228,7 @@ export default function Pauta() {
         data_solicitacao: c.data_solicitacao || pedido.data_solicitacao,
         data_entrega: c.data_entrega,
         esforco: c.esforco ?? null,
+        campanha: c.campanha ?? pedido.campanha ?? null,
         pasta_codigo: c.pasta_codigo,
         pasta_url: c.pasta_url,
       });
@@ -231,7 +241,7 @@ export default function Pauta() {
 
   async function confirmaFoco(extras) {
     setSalvandoFoco(true);
-    const { erro: e } = await criarPedido({ cliente_id: cfg.cliente.id, ...foco, tags: undefined, ...extras });
+    const { erro: e } = await criarPedido({ ...foco, tags: undefined, ...extras });
     setSalvandoFoco(false);
     if (e) return aviso(`Não deu para salvar: ${e}`);
     setFoco(null);
@@ -249,7 +259,7 @@ export default function Pauta() {
   return (
     <>
       <Cabecalho
-        cliente={cfg.cliente} meses={meses} mesAtual={hojeISO().slice(0, 7)}
+        meses={meses} mesAtual={hojeISO().slice(0, 7)}
         mesSel={mesSel} setMesSel={setMesSel} contaMes={contaMes}
         perfil={perfil} podeEditar={podeEditar} ehAdmin={ehAdmin}
         aoLogin={() => setMostraLogin(true)} aoAdmin={() => setMostraAdmin(true)}
@@ -257,13 +267,22 @@ export default function Pauta() {
       />
 
       <main className="wrap">
-        {vista === "pauta" && area === "pauta" && <Resumo pedidos={doMes} mesSel={mesSel} cfg={cfg} />}
+        {vista === "pauta" && area === "pauta" && (
+          <div className="topo">
+            <Resumo pedidos={doMes} mesSel={mesSel} cfg={cfg} />
+            <Medidor pedidos={pedidos} cfg={cfg} />
+          </div>
+        )}
 
         {vista === "pauta" ? (
           <section>
             <div className="toolbar">
               {area === "pauta" ? (
                 <>
+                  <select className="f" value={filtros.cli} onChange={(e) => setFiltros({ ...filtros, cli: e.target.value })}>
+                    <option value="">Cliente</option>
+                    {clientes.map((c) => <option key={c}>{c}</option>)}
+                  </select>
                   <select className="f" value={filtros.dem} onChange={(e) => setFiltros({ ...filtros, dem: e.target.value })}>
                     <option value="">Demandante</option>
                     {cfg.demandantes.map((d) => <option key={d.id}>{d.nome}</option>)}
@@ -282,7 +301,7 @@ export default function Pauta() {
                   </select>
                   <input className="search" type="search" placeholder="Buscar pedido…"
                     value={filtros.q} onChange={(e) => setFiltros({ ...filtros, q: e.target.value.toLowerCase().trim() })} />
-                  <button className="chipclear" onClick={() => setFiltros({ dem: "", tipo: "", status: "", rec: "", q: "" })}>limpar</button>
+                  <button className="chipclear" onClick={() => setFiltros({ cli: "", dem: "", tipo: "", status: "", rec: "", q: "" })}>limpar</button>
                 </>
               ) : (
                 <button className="chipclear" onClick={() => setArea("pauta")}>← voltar à pauta</button>
@@ -341,7 +360,7 @@ export default function Pauta() {
 
             {area === "reguas" && (
               <Reguas
-                reguas={reguas} podeEditar={podeEditar} aviso={aviso}
+                reguas={reguas} clientes={clientes} podeEditar={podeEditar} aviso={aviso}
                 salvar={salvarRegua} criar={criarRegua} remover={removerRegua}
               />
             )}
@@ -353,13 +372,15 @@ export default function Pauta() {
               />
             )}
           </section>
+        ) : vista === "azure" ? (
+          <Confronto podeEditar={podeEditar} aviso={aviso} aoTrazer={aoColar} />
         ) : (
           <Relatorios pedidos={doMes} cfg={cfg} mesSel={mesSel} aviso={aviso} dica={dica} />
         )}
 
         <footer>
-          <b>Pauta v2 · {cfg.cliente?.nome}.</b> As colunas 🔵 Azure, 📁 Pasta, Pedido, 📅 Entrega, ⚡ Esforço e Recurso
-          vêm do card e são atualizadas pelo sync a cada 10 minutos. O resto é da casa e ninguém sobrescreve.
+          <b>Pauta v2.</b> As colunas Cliente, 🔵 Azure, 📁 Pasta, Pedido, 📅 Entrega, ⚡ Esforço e Recurso vêm do
+          card e são atualizadas pelo sync a cada 10 minutos. O resto é da casa e ninguém sobrescreve.
         </footer>
       </main>
 

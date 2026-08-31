@@ -80,6 +80,11 @@ export default function Fila({ fila, pedidos, cfg, podeEditar, salvar, aviso }) 
                   )}
                 </td>
                 <td>
+                  {p.campanha
+                    ? <div className="ro cliente">{p.campanha}</div>
+                    : <div className="ro empty">—</div>}
+                </td>
+                <td>
                   {nomeDem(p) ? <div className="ro">{nomeDem(p)}</div> : <div className="ro empty">—</div>}
                 </td>
                 <td><div className="ro" title={p.titulo || ""}>{p.titulo || <em>sem título</em>}</div></td>
