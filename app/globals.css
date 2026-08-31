@@ -393,21 +393,23 @@ button.data.vazio{color:var(--faint)}
 span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%;height:26px;border-radius:20px;
   font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;padding:0 8px;font-weight:600}
 
-/* Linha cancelada na pauta: some do fluxo sem sumir da tela. */
-.grade tbody tr.cancelada td{background:color-mix(in srgb, var(--alerta) 7%, var(--surface))}
-.grade tbody tr.cancelada:hover td{background:color-mix(in srgb, var(--alerta) 12%, var(--surface))}
-.grade tbody tr.cancelada td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
+/* Linha fora do fluxo — parada ou cancelada — em CINZA: são pedidos que
+   pararam de andar, não erros a corrigir. É o mesmo --none da bolinha de
+   parados, e como cinza tem pouca saturação a mistura entra mais forte que a
+   do vermelho para continuar visível nos dois temas. O vermelho fica só para
+   a linha sem card, que ainda espera alguém agir. O que separa cancelada de
+   parada é o título riscado. */
+.grade tbody tr.cancelada td{background:color-mix(in srgb, var(--none) 12%, var(--surface))}
+.grade tbody tr.cancelada:hover td{background:color-mix(in srgb, var(--none) 19%, var(--surface))}
+.grade tbody tr.cancelada td:first-child{box-shadow:inset 3px 0 0 var(--none)}
 .grade tbody tr.cancelada .pedido .ro{text-decoration:line-through;color:var(--muted)}
 
-/* Linha fora do fluxo — parada, cancelada ou ainda sem card: as três em
-   vermelho, porque as três querem a mesma coisa, que é alguém olhar. O que
-   separa cancelada das outras é o título riscado. */
-.grade tbody tr.parada td{background:color-mix(in srgb, var(--alerta) 7%, var(--surface))}
-.grade tbody tr.parada:hover td{background:color-mix(in srgb, var(--alerta) 12%, var(--surface))}
-.grade tbody tr.parada td:first-child{box-shadow:inset 3px 0 0 var(--alerta)}
+.grade tbody tr.parada td{background:color-mix(in srgb, var(--none) 12%, var(--surface))}
+.grade tbody tr.parada:hover td{background:color-mix(in srgb, var(--none) 19%, var(--surface))}
+.grade tbody tr.parada td:first-child{box-shadow:inset 3px 0 0 var(--none)}
 .grade tbody tr.parada .pedido .ro{color:var(--muted)}
 
-/* Fura-fila: rosa da casa, mais forte que o vermelho das exceções. Vem depois
+/* Fura-fila: rosa da casa, mais forte que o cinza das exceções. Vem depois
    delas na folha justamente para vencer quando uma linha é as duas coisas. */
 .grade tbody tr.fura td{background:color-mix(in srgb, var(--accent) 13%, var(--surface))}
 .grade tbody tr.fura:hover td{background:color-mix(in srgb, var(--accent) 20%, var(--surface))}
