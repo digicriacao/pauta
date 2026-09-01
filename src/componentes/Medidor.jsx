@@ -2,15 +2,19 @@
 
 import { useMemo } from "react";
 import { achaRecurso } from "@/lib/recursos";
-import { ESFORCO_DIA, ESTADOS_MEDIDOR, MAPA_ESTADO } from "@/lib/constantes";
+import { ESFORCO_DIA, ESTADOS_MEDIDOR, estadoDe, estadoEstaEm } from "@/lib/constantes";
 
 /**
  * Trabalho em mão: entra no medidor o card que o Azure diz estar EM PAUTA ou EM
  * DESENVOLVIMENTO. É a fila de cada pessoa — o que já foi combinado com ela e o
  * que ela está fazendo agora —, e não o que vence hoje. Card em refinamento
  * ainda não é de ninguém; card entregue já saiu da mão.
+ *
+ * A comparação passa por `estadoEstaEm`, e não por uma checagem direta: o
+ * processo de vocês nomeia as colunas em português ("Em Pauta"), e não pelos
+ * nomes internos do Azure ("Ready"). Comparar cru zerava o medidor inteiro.
  */
-const emMao = (p) => ESTADOS_MEDIDOR.includes(MAPA_ESTADO[p.azure_state] || "");
+const emMao = (p) => estadoEstaEm(p, ESTADOS_MEDIDOR);
 
 /**
  * Quanto esforço cada pessoa tem em mão.
@@ -37,6 +41,19 @@ export default function Medidor({ pedidos, cfg }) {
     });
   }, [pedidos, cfg.recursos]);
 
+  /* Zerado pode ser verdade (dia calmo) ou engano (o nome do estado no Azure
+     mudou e nada mais bate). Os dois casos são idênticos na tela, então a lista
+     dos estados encontrados vai no balão do total — é a primeira coisa que
+     alguém precisa ver para saber de qual dos dois se trata. */
+  const estadosVistos = useMemo(() => {
+    const s = new Set();
+    for (const p of pedidos) {
+      const e = estadoDe(p);
+      if (e) s.add(e);
+    }
+    return [...s].sort();
+  }, [pedidos]);
+
   // A barra é escala fixa, e não relativa ao colega mais carregado: dez de
   // esforço enche. Assim "meia barra" quer dizer sempre a mesma coisa, hoje e
   // no mês que vem — comparar com o vizinho não diria nada sobre capacidade.
@@ -48,7 +65,13 @@ export default function Medidor({ pedidos, cfg }) {
       <div className="med-h">
         <span className="k">Esforço</span>
         <span className="med-total mono"
-          title={`${total} de esforço em mão no time — cards ${ESTADOS_MEDIDOR.join(" e ")} no Azure`}>
+          title={
+            `${total} de esforço em mão no time — cards ${ESTADOS_MEDIDOR.join(" e ")} no Azure.` +
+            (total === 0 && pedidos.length
+              ? `\n\nNenhum card nesses dois estados. Os estados que aparecem na pauta agora são: ` +
+                `${estadosVistos.join(", ") || "nenhum"}.`
+              : "")
+          }>
           {total}
         </span>
       </div>

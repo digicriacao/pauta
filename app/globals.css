@@ -829,3 +829,10 @@ body{zoom:var(--zoom,1);
 .esc-seta{grid-column:2;grid-row:1/4;font-style:normal;font-size:16px;color:var(--line-strong)}
 .esc-card:hover .esc-seta{color:var(--accent)}
 .esc-nota{margin:22px 0 0;color:var(--faint);font-size:12px;line-height:1.6;max-width:60ch}
+
+/* Selo do refresco do Azure, no rodapé. Discreto quando está tudo bem, visível
+   quando não está — um refresco quebrado que não dá sinal deixa a tela
+   mostrando número velho com cara de novo. */
+.az-selo{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--faint);white-space:nowrap}
+.az-selo.indo{color:var(--muted)}
+.az-selo.erro{color:var(--alerta);font-weight:600}

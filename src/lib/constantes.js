@@ -40,6 +40,36 @@ export const MAPA_ESTADO = ESTADOS_AZURE.reduce((acc, e) => {
   return acc;
 }, {});
 
+/** Sem acento, sem caixa, sem espaço sobrando. */
+const chaveEstado = (s) =>
+  String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase().replace(/\s+/g, " ").trim();
+
+/**
+ * O estado como ele aparece na tela, valendo para os dois jeitos de o Azure
+ * nomear a coluna.
+ *
+ * `MAPA_ESTADO` só conhece os nomes internos do processo padrão ("Ready",
+ * "Active"). Quando o processo usa nomes próprios em português — "Em Pauta",
+ * "Em Desenvolvimento" — o mapa devolve nada, e é o plano B que responde. A
+ * grade sempre teve esse plano B; o medidor não tinha, e por isso apareceu
+ * zerado para todo mundo. Quem for comparar estado use SEMPRE esta função.
+ */
+export const estadoDe = (p) =>
+  MAPA_ESTADO[p?.azure_state] || chaveEstado(p?.azure_state);
+
+/** Um estado é um dos nomes desta lista? Compara sem acento e sem caixa, e
+ *  aceita tanto o nome de tela quanto o nome interno do Azure. */
+export function estadoEstaEm(pedido, nomes) {
+  const alvo = chaveEstado(estadoDe(pedido));
+  if (!alvo) return false;
+  return nomes.some((nome) => {
+    if (chaveEstado(nome) === alvo) return true;
+    const e = ESTADOS_AZURE.find((x) => x.nome === nome);
+    return (e?.de || []).some((cru) => chaveEstado(cru) === alvo);
+  });
+}
+
 export const corEstado = (nome) =>
   ESTADOS_AZURE.find((e) => e.nome === nome)?.cor || "var(--none)";
 

@@ -8,12 +8,18 @@ import { chamaFuncao } from "@/lib/funcoes";
  * Carrega cadastros + pedidos, mantém a grade viva por Realtime e expõe as
  * ações de escrita. Tudo passa por RLS: leitor consegue ler, só editor grava.
  */
+/** De quanto em quanto tempo a tela relê o Azure por conta própria. */
+export const INTERVALO_AZURE = 5 * 60 * 1000;
+
 export function useDados() {
   const [cfg, setCfg] = useState({ clientes: [], demandantes: [], tipos: [], status: [], recursos: [] });
   const [pedidos, setPedidos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
+  // Como foi o último refresco vindo do Azure — vira a linha do rodapé.
+  const [azure, setAzure] = useState({ estado: "parado", em: null, erro: null });
   const montado = useRef(true);
+  const ocupado = useRef(false);
 
   const carregar = useCallback(async () => {
     const sb = supabase();
@@ -54,6 +60,63 @@ export function useDados() {
       if (montado.current) setCarregando(false);
     }
   }, []);
+
+  /**
+   * Relê no Azure as linhas que já estão na pauta e traz esforço, datas e
+   * estado atualizados. Sem `ids`, vale para a pauta inteira.
+   *
+   * Quem faz o trabalho é a Edge Function, porque o PAT do Azure não pode
+   * chegar ao navegador. Sem sessão a chamada nem sai: leitor não tem
+   * permissão, e para ele quem mantém a pauta em dia é o agendador do banco.
+   */
+  const atualizarDoAzure = useCallback(async (ids) => {
+    const sb = supabase();
+    if (!sb) return {};
+    // Duas chamadas ao mesmo tempo não adiantam nada e só dobram o tráfego.
+    if (ocupado.current) return {};
+    const { data } = await sb.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) return {};
+
+    ocupado.current = true;
+    if (montado.current) setAzure((a) => ({ ...a, estado: "indo" }));
+    try {
+      const corpo = { acao: "atualizar", ...(ids?.length ? { ids } : {}) };
+      const { ok, dados: r } = await chamaFuncao("sync", corpo, token);
+      if (!montado.current) return {};
+      if (!ok) {
+        setAzure({ estado: "erro", em: new Date(), erro: r?.erro || "sem resposta" });
+        return { erro: r?.erro || "sem resposta" };
+      }
+      setAzure({ estado: "ok", em: new Date(), erro: null });
+      // O Realtime já traz as linhas alteradas, mas reler é barato e fecha o
+      // buraco de quando o canal cai sem avisar.
+      if (r?.atualizados) await carregar();
+      return {};
+    } catch (e) {
+      if (montado.current) setAzure({ estado: "erro", em: new Date(), erro: String(e.message || e) });
+      return { erro: String(e.message || e) };
+    } finally {
+      ocupado.current = false;
+    }
+  }, [carregar]);
+
+  /* Ao abrir a página, de cinco em cinco minutos e ao voltar para a aba.
+     Aba escondida não gasta chamada — e ao voltar, a primeira coisa que
+     acontece é um refresco, que é justamente quando a tela está mais velha. */
+  useEffect(() => {
+    const bater = () => {
+      if (document.visibilityState === "visible") atualizarDoAzure();
+    };
+    bater();
+    const t = setInterval(bater, INTERVALO_AZURE);
+    const aoVoltar = () => document.visibilityState === "visible" && bater();
+    document.addEventListener("visibilitychange", aoVoltar);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", aoVoltar);
+    };
+  }, [atualizarDoAzure]);
 
   useEffect(() => {
     montado.current = true;
@@ -99,8 +162,16 @@ export function useDados() {
       if (anterior) setPedidos((atual) => atual.map((p) => (p.id === id ? anterior : p)));
       return { erro: error.message };
     }
+
+    /* Trocar o status interno quase sempre vem junto de alguém ter mexido no
+       card do outro lado. Relê só aquele card — é uma chamada pequena e evita
+       a tela ficar dizendo uma coisa enquanto o Azure diz outra. Vai solto de
+       propósito: quem salvou não pode esperar o Azure para seguir digitando. */
+    if ("status_interno_id" in campos && anterior?.azure_id) {
+      atualizarDoAzure([anterior.azure_id]);
+    }
     return {};
-  }, []);
+  }, [atualizarDoAzure]);
 
   const criarPedido = useCallback(async (dados) => {
     const sb = supabase();
@@ -124,7 +195,7 @@ export function useDados() {
     return {};
   }, [pedidos]);
 
-  return { cfg, setCfg, pedidos, carregando, erro, recarregar: carregar, salvarCampo, criarPedido, removerPedido };
+  return { cfg, setCfg, pedidos, carregando, erro, recarregar: carregar, salvarCampo, criarPedido, removerPedido, azure, atualizarDoAzure };
 }
 
 /**

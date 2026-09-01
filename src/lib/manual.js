@@ -309,7 +309,12 @@ export const MANUAL = [
     grupo: "Administração",
     titulo: "O sync com o Azure",
     corpo: [
-      ["p", "De dez em dez minutos a plataforma vai ao Azure buscar os cards e atualiza as colunas que são de lá. Ele escreve exatamente sete coisas: título, cliente, estado, responsável, datas, esforço e a pasta."],
+      ["p", "São dois movimentos diferentes, e vale saber qual é qual."],
+      ["ul", [
+        "A varredura completa roda no servidor de dez em dez minutos. É ela que descobre card NOVO e cria a linha.",
+        "O refresco leve roda no seu navegador: ao abrir a página, de cinco em cinco minutos com a aba aberta, ao voltar para a aba e depois de cada troca de status interno. Ele relê no Azure só as linhas que já estão na pauta e atualiza esforço, datas, estado e responsável — nunca cria linha nova.",
+      ]],
+      ["p", "O refresco leve precisa de login: quem está em modo de leitura vê a pauta se atualizar pela varredura do servidor. No rodapé fica a hora do último refresco, e um aviso em vermelho se ele falhar."],
       ["p", "Se um card não aparece na pauta, as causas quase sempre são: o card não é do tipo Criação, o card está em estado final, ou ninguém colou o link ainda. O botão ⚖ Azure mostra justamente esses casos."],
       ["nota", "O acesso ao Azure fica guardado no servidor. O navegador nunca fala com o Azure direto — por isso não adianta abrir a pauta “por dentro” para acelerar o sync."],
     ],

@@ -22,7 +22,7 @@ import Confronto from "./Confronto";
 import Ajuda from "./Ajuda";
 
 export default function Pauta() {
-  const { cfg, pedidos, carregando, erro, recarregar, salvarCampo, criarPedido, removerPedido } = useDados();
+  const { cfg, pedidos, carregando, erro, recarregar, salvarCampo, criarPedido, removerPedido, azure } = useDados();
   const { perfil, podeEditar, ehAdmin, recarregar: relerSessao, sair } = useSessao();
 
   const { reguas, salvarRegua, criarRegua, removerRegua } = useReguas();
@@ -388,7 +388,21 @@ export default function Pauta() {
 
         <footer>
           <b>Pauta v2.</b> As colunas Cliente, 🔵 Azure, 📁 Pasta, Pedido, 📅 Entrega, ⚡ Esforço e Recurso vêm do
-          card e são atualizadas pelo sync a cada 10 minutos. O resto é da casa e ninguém sobrescreve.
+          card. O resto é da casa e ninguém sobrescreve.
+          {" "}
+          {/* Sem esta linha, um refresco que para de funcionar não dá sinal
+              nenhum: a tela continua mostrando números velhos com cara de
+              novos. É pequena de propósito — só cresce quando dá erro. */}
+          <span className={`az-selo ${azure.estado}`} title={
+            azure.estado === "erro"
+              ? `Não consegui reler o Azure: ${azure.erro}`
+              : "Esforço, datas e estado são relidos do Azure ao abrir a página, a cada 5 minutos e depois de cada troca de status interno."
+          }>
+            {azure.estado === "indo" && "relendo o Azure…"}
+            {azure.estado === "ok" && azure.em &&
+              `Azure relido às ${azure.em.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
+            {azure.estado === "erro" && "⚠ não consegui reler o Azure"}
+          </span>
         </footer>
       </main>
 
