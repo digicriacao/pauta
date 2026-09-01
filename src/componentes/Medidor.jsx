@@ -1,34 +1,34 @@
 "use client";
 
 import { useMemo } from "react";
-import { hojeISO } from "@/lib/formato";
 import { achaRecurso } from "@/lib/recursos";
-import { ESFORCO_DIA } from "@/lib/constantes";
-
-/** Entrega marcada para hoje — pela hora combinada, ou pela data do card. */
-function ehDeHoje(p, hoje) {
-  const dia = p.entrega_em ? new Date(p.entrega_em).toISOString().slice(0, 10) : p.data_entrega;
-  return dia === hoje;
-}
+import { ESFORCO_DIA, ESTADOS_MEDIDOR, MAPA_ESTADO } from "@/lib/constantes";
 
 /**
- * Quanto esforço cada pessoa tem marcado para hoje.
+ * Trabalho em mão: entra no medidor o card que o Azure diz estar EM PAUTA ou EM
+ * DESENVOLVIMENTO. É a fila de cada pessoa — o que já foi combinado com ela e o
+ * que ela está fazendo agora —, e não o que vence hoje. Card em refinamento
+ * ainda não é de ninguém; card entregue já saiu da mão.
+ */
+const emMao = (p) => ESTADOS_MEDIDOR.includes(MAPA_ESTADO[p.azure_state] || "");
+
+/**
+ * Quanto esforço cada pessoa tem em mão.
  *
  * Quem aparece aqui sai do cadastro de Recursos, no Admin — a caixinha
  * "medidor" de cada linha. Assim entra e sai gente sem mexer em código.
  *
- * Cada célula traz o número (o fato) sobre uma barra fininha proporcional a
- * quem tem mais no dia (o contraste). Quem está zerado continua na lista: a
- * ausência de carga é justamente o que se quer enxergar de relance.
+ * Cada célula traz o número (o fato) sobre uma barra fininha (o contraste).
+ * Quem está zerado continua na lista: a ausência de carga é justamente o que se
+ * quer enxergar de relance.
  */
 export default function Medidor({ pedidos, cfg }) {
   const linhas = useMemo(() => {
-    const hoje = hojeISO();
-    const doDia = pedidos.filter((p) => ehDeHoje(p, hoje));
+    const abertos = pedidos.filter(emMao);
     const escolhidos = (cfg.recursos || []).filter((r) => r.medidor);
 
     return escolhidos.map((r) => {
-      const meus = doDia.filter((p) => achaRecurso(escolhidos, p.azure_assigned_to)?.id === r.id);
+      const meus = abertos.filter((p) => achaRecurso(escolhidos, p.azure_assigned_to)?.id === r.id);
       return {
         nome: r.nome_pauta || r.nome_azure,
         esforco: meus.reduce((s, p) => s + (Number(p.esforco) || 0), 0),
@@ -37,7 +37,7 @@ export default function Medidor({ pedidos, cfg }) {
     });
   }, [pedidos, cfg.recursos]);
 
-  // A barra é percentual de um dia cheio, não do colega mais carregado: dez de
+  // A barra é escala fixa, e não relativa ao colega mais carregado: dez de
   // esforço enche. Assim "meia barra" quer dizer sempre a mesma coisa, hoje e
   // no mês que vem — comparar com o vizinho não diria nada sobre capacidade.
   const total = linhas.reduce((s, l) => s + l.esforco, 0);
@@ -46,16 +46,19 @@ export default function Medidor({ pedidos, cfg }) {
   return (
     <aside className="medidor">
       <div className="med-h">
-        <span className="k">Esforço de hoje</span>
-        <span className="med-esc mono" title={`Cada barra enche em ${ESFORCO_DIA} — um dia cheio`}>escala {ESFORCO_DIA}</span>
-        <span className="med-total mono">{total}</span>
+        <span className="k">Esforço</span>
+        <span className="med-total mono"
+          title={`${total} de esforço em mão no time — cards ${ESTADOS_MEDIDOR.join(" e ")} no Azure`}>
+          {total}
+        </span>
       </div>
 
       {linhas.length ? (
         <div className="med-cels">
           {linhas.map((l) => (
             <div className={`med-cel${l.esforco ? "" : " vazio"}${l.esforco > ESFORCO_DIA ? " estourou" : ""}`} key={l.nome}
-              title={`${l.nome}: ${l.esforco} de esforço em ${l.pedidos} ${l.pedidos === 1 ? "pedido" : "pedidos"} com entrega hoje` +
+              title={`${l.nome}: ${l.esforco} de esforço em ${l.pedidos} ${l.pedidos === 1 ? "card" : "cards"}` +
+                     ` ${ESTADOS_MEDIDOR.join(" ou ")} no Azure` +
                      ` — ${Math.round((l.esforco / ESFORCO_DIA) * 100)}% de um dia cheio (${ESFORCO_DIA})`}>
               <span className="med-num mono">{l.esforco}</span>
               <span className="med-nome">{l.nome}</span>

@@ -163,6 +163,12 @@ export const MEDIDOR_RECURSOS = ["André", "Letícia", "Gabriela", "Vinicius"];
 /** Esforço que enche a barra do medidor: 10 é o dia cheio de uma pessoa. */
 export const ESFORCO_DIA = 10;
 
+/** O que o medidor soma: os estados do Azure que significam trabalho em mão —
+ *  o que já está na fila da pessoa e o que ela está fazendo agora. Ficam pelo
+ *  nome que aparece na tela, e não pelo nome cru do Azure ("Ready", "Active"),
+ *  porque é este o nome que o time usa quando conversa sobre a coluna. */
+export const ESTADOS_MEDIDOR = ["EM PAUTA", "EM DESENVOLVIMENTO"];
+
 /* ── Zoom ───────────────────────────────────────────────────────────────────
    A grade tem dezessete colunas e nem toda tela cabe todas. Em vez de espremer
    uma por uma, a pessoa encolhe a página inteira — o mesmo que o zoom do

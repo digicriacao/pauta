@@ -163,9 +163,10 @@ export const MANUAL = [
     grupo: "A pauta",
     titulo: "O resumo e o medidor de esforço",
     corpo: [
-      ["p", "No alto da pauta ficam duas coisas. À esquerda, o resumo do mês: quantos pedidos entraram, quantos estão em produção e quantos já saíram. À direita, o medidor de esforço do dia."],
-      ["p", "O medidor mostra, para cada pessoa, a soma do esforço dos cards com entrega marcada para hoje. A barra enche em 10, que é o dia cheio de uma pessoa — meia barra quer dizer meio dia de trabalho, hoje e no mês que vem."],
-      ["p", "Passando de 10, o número e a barra ficam vermelhos: é sinal de que alguém está com mais do que cabe no dia."],
+      ["p", "No alto da pauta ficam duas coisas. À esquerda, o resumo do mês: quantos pedidos entraram, quantos estão em produção e quantos já saíram. À direita, o medidor de esforço."],
+      ["p", "O medidor mostra, para cada pessoa, a soma do esforço dos cards que estão EM PAUTA ou EM DESENVOLVIMENTO no Azure — o que ela tem em mão: o que já foi combinado com ela mais o que está fazendo agora. Card em refinamento ainda não é de ninguém, e card entregue já saiu da conta."],
+      ["p", "A barra enche em 10, que é o dia cheio de uma pessoa. Como a conta é da fila inteira, e não do dia, passar de uma barra cheia é o normal de quem tem trabalho combinado para os próximos dias — o que a barra mostra é quem está com muito mais em mão do que os outros."],
+      ["p", "Passando de 10, o número e a barra ficam vermelhos: é sinal de que a fila daquela pessoa já passa de um dia de trabalho."],
       ["nota", "Quem aparece no medidor é escolhido no Admin, em Recursos, pela caixinha “medidor”. Ninguém entra ou sai dali por código."],
     ],
   },
@@ -201,7 +202,7 @@ export const MANUAL = [
         ["4", "Conceito criativo ou nova identidade. De 1 a 3 dias úteis."],
         ["5", "Campanha completa do zero. De 3 a 5 dias úteis."],
       ]],
-      ["nota", "O medidor do topo enche em 10. Ou seja: dois cards de esforço 5 já ocupam o dia inteiro de uma pessoa."],
+      ["nota", "O medidor do topo enche em 10, que é um dia cheio. Ele soma os cards EM PAUTA e EM DESENVOLVIMENTO de cada pessoa, então mostra a fila dela — não só o dia de hoje."],
     ],
   },
 

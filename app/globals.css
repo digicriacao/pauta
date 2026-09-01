@@ -549,8 +549,10 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .medidor{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   padding:9px 12px;display:flex;flex-direction:column;gap:7px;min-width:250px}
 .med-h{display:flex;align-items:baseline;gap:5px}
-.med-esc{margin-right:auto}
-.med-h .k{font-family:var(--mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+/* O rótulo empurra o total para a ponta. Antes quem fazia isso era a legenda
+   "escala 10", que saiu — sem passar a tarefa adiante, o total colava no
+   rótulo. */
+.med-h .k{margin-right:auto;font-family:var(--mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
 .med-total{font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
 .med-cels{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(52px,1fr);gap:10px}
 .med-cel{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -569,7 +571,6 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 .med-cel.vazio .med-tri i{background:transparent}
 .med-cel.estourou .med-num{color:var(--alerta)}
 .med-cel.estourou .med-tri i{background:var(--alerta)}
-.med-esc{font-size:10px;color:var(--faint)}
 .med-sem{margin:2px 0 0;font-size:11px;color:var(--faint);line-height:1.35}
 
 /* o nome do cliente na grade: some do jeito que um dado de leitura deve sumir */
