@@ -412,7 +412,9 @@ export default function Pauta() {
       )}
 
       {dicaTxt && (
-        <div className="tip on" style={{ left: dicaPos.x, top: dicaPos.y }}
+        // A posição vem do mouse, em pixels da tela, mas o balão é desenhado
+        // no espaço já encolhido pelo zoom — daí a divisão, feita na folha.
+        <div className="tip on" style={{ "--tx": `${dicaPos.x}px`, "--ty": `${dicaPos.y}px` }}
           dangerouslySetInnerHTML={{ __html: dicaTxt }} />
       )}
 

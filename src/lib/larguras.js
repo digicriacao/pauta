@@ -7,6 +7,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * As três grades (pauta, réguas, cancelados) usam este mesmo hook, cada uma
  * com sua chave — quem alarga a coluna "Régua" não mexe na pauta de ninguém.
  */
+/** O zoom em vigor. O mouse é medido em pixels da tela, mas a largura da coluna
+ *  é escrita em pixels de CSS — a 80% um arraste de 100px engordaria a coluna
+ *  em 125, e a borda fugiria do cursor. */
+const zoomAtual = () => {
+  if (typeof window === "undefined") return 1;
+  return parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+};
+
 export function useLarguras(chave) {
   const [larguras, setLarguras] = useState({});
   const arraste = useRef(null);
@@ -18,8 +26,8 @@ export function useLarguras(chave) {
   useEffect(() => {
     const move = (e) => {
       if (!arraste.current) return;
-      const { id, x0, w0 } = arraste.current;
-      setLarguras((l) => ({ ...l, [id]: Math.max(56, w0 + (e.clientX - x0)) }));
+      const { id, x0, w0, z } = arraste.current;
+      setLarguras((l) => ({ ...l, [id]: Math.max(56, Math.round(w0 + (e.clientX - x0) / z)) }));
     };
     const solta = () => {
       if (!arraste.current) return;
@@ -44,7 +52,7 @@ export function useLarguras(chave) {
   const pegaBorda = useCallback((e, c) => {
     e.preventDefault();
     e.stopPropagation();
-    arraste.current = { id: c.id, x0: e.clientX, w0: larguras[c.id] || c.largura };
+    arraste.current = { id: c.id, x0: e.clientX, w0: larguras[c.id] || c.largura, z: zoomAtual() };
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   }, [larguras]);

@@ -48,7 +48,13 @@ body{overflow-x:clip;margin:0;background:var(--ground);color:var(--ink);font-fam
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-.wrap{max-width:1660px;margin:0 auto;padding:0 18px}
+/* Sem teto de largura: a pauta ocupa a tela inteira.
+   Com um `max-width` fixo, diminuir o zoom não mostrava nada de novo — o
+   container encolhia junto com o texto e a sobra virava margem. Numa tela de
+   1912px, 698px de colunas ficavam escondidos tanto a 100% quanto a 70%, e a
+   margem lateral saltava de 126px para 550px. Agora o zoom faz o que promete:
+   encolher a letra para caber mais coluna. */
+.wrap{max-width:none;margin:0 auto;padding:0 18px}
 .hide{display:none!important}
 .spacer{flex:1}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
@@ -106,7 +112,12 @@ input.f[type="date"]{font-family:var(--mono);font-size:12px;width:145px}
 .search{width:190px}
 .chipclear{border:0;background:transparent;color:var(--accent-ink);cursor:pointer;font-size:12.5px;text-decoration:underline}
 
-.gridwrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:auto;max-height:calc(100vh - var(--htop,58px) - 140px)}
+/* `--tela` é a altura real do monitor, escrita pelo componente de zoom — a
+   única medida que vw/vh não sabem dar aqui dentro. Dividida pelo zoom, a
+   grade continua ocupando o monitor todo: diminuir o zoom passa a mostrar mais
+   linhas, e não a mesma quantidade menor. */
+.gridwrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:auto;
+  max-height:calc((var(--tela,100vh) / var(--zoom,1)) - var(--htop,58px) - 140px)}
 table.grade{border-collapse:separate;border-spacing:0;table-layout:fixed}
 .grade thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);text-align:center;
   font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
@@ -269,7 +280,7 @@ table.res th.num,table.res td.num{text-align:right;font-family:var(--mono);font-
 
 .scrim{position:fixed;inset:0;background:rgba(12,12,14,.45);z-index:50;opacity:0;pointer-events:none;transition:opacity .15s}
 .scrim.on{opacity:1;pointer-events:auto}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(500px,96vw);background:var(--surface);border-left:1px solid var(--line);z-index:51;transform:translateX(100%);transition:transform .2s ease;display:flex;flex-direction:column}
+.drawer{position:fixed;top:0;right:0;width:min(500px,calc(96% / var(--zoom,1)));background:var(--surface);border-left:1px solid var(--line);z-index:51;transform:translateX(100%);transition:transform .2s ease;display:flex;flex-direction:column}
 .drawer.on{transform:none}
 .dw-h{background:var(--surface);border-bottom:1px solid var(--line);padding:15px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .dw-h h2{margin:0;font-size:16px;font-weight:640}
@@ -629,7 +640,32 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
 /* O zoom mora numa variável para que o script que roda antes da primeira
    pintura e o botão do cabeçalho escrevam no mesmo lugar. `zoom` (e não
    `transform:scale`) porque scale desloca tudo que é position:fixed. */
-body{zoom:var(--zoom,1)}
+/* `zoom` encolhe o desenho mas NÃO aumenta a viewport: sem compensar, o corpo
+   continuava com a largura de antes e sobrava uma faixa morta à direita — 382px
+   a 80%. Daí a divisão: a 80% o corpo passa a medir 125% da tela em px de CSS,
+   que depois de encolhido dá exatamente a tela cheia.
+
+   A conta é feita com PORCENTAGEM, e não com vw/vh, de propósito. Dentro de um
+   elemento com zoom o Chrome já mexe nas unidades de viewport por conta
+   própria (a 80%, `100vw` devolve 1530px e não 1912px), então uma conta com vw
+   erra duas vezes. Porcentagem resolve contra o pai, que não tem zoom, e se
+   comporta igual em todo navegador. */
+html{height:100%}
+body{zoom:var(--zoom,1);
+  width:calc(100% / var(--zoom,1));
+  min-height:calc(100% / var(--zoom,1))}
+
+/* Elementos `position:fixed` continuam medindo a viewport SEM zoom, seja o
+   zoom aplicado na raiz ou no corpo. Quem só depende de tamanho se resolve com
+   a mesma divisão; quem se ancora à direita ou embaixo precisa também que a
+   âncora ande, senão a gaveta para no meio da tela e o aviso flutua acima do
+   rodapé. São três elementos ao todo — vale conferir esta lista ao acrescentar
+   qualquer coisa fixa nova. */
+.mask,.scrim{width:calc(100% / var(--zoom,1));height:calc(100% / var(--zoom,1))}
+.drawer{height:calc(100% / var(--zoom,1));right:calc(100% - 100% / var(--zoom,1))}
+.toast{left:calc(50% / var(--zoom,1));bottom:calc(100% - (100% - 26px) / var(--zoom,1))}
+/* O balão dos gráficos segue o mouse, que é medido em pixels da tela. */
+.tip{left:calc(var(--tx,0px) / var(--zoom,1));top:calc(var(--ty,0px) / var(--zoom,1))}
 
 .zoom{display:inline-flex;align-items:center;height:32px;border:1px solid var(--line-strong);
   border-radius:8px;overflow:hidden;background:var(--surface)}

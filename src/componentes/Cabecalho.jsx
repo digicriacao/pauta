@@ -37,6 +37,18 @@ function Zoom() {
     try { localStorage.setItem(LS_ZOOM, String(z)); } catch {}
   }, [z, lido]);
 
+  // A altura real da janela, em pixels. Precisa vir daqui porque dentro de um
+  // elemento com zoom as unidades de viewport deixam de valer: o Chrome mexe em
+  // `vh` por conta própria e o resultado sai encolhido duas vezes. Com este
+  // número a grade continua do tamanho do monitor, e diminuir o zoom passa a
+  // mostrar mais linhas em vez das mesmas linhas menores.
+  useEffect(() => {
+    const mede = () => document.documentElement.style.setProperty("--tela", `${window.innerHeight}px`);
+    mede();
+    window.addEventListener("resize", mede);
+    return () => window.removeEventListener("resize", mede);
+  }, []);
+
   const i = ZOOMS.indexOf(z);
   const anda = (passo) => setZ(ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, i + passo))]);
 
