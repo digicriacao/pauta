@@ -79,7 +79,14 @@ export default function RootLayout({ children }) {
         {/* Aplica o tema salvo antes da primeira pintura, senão a tela pisca. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("pauta.v2.tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}`,
+            __html:
+              `try{var t=localStorage.getItem("pauta.v2.tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}` +
+              // O zoom salvo também entra antes da primeira pintura: sem isto a
+              // página nasce em 100% e salta de tamanho quando o React monta,
+              // que é bem pior de ver do que o pisca-pisca do tema. Vai numa
+              // variável, e não em body.style, porque aqui no <head> o <body>
+              // ainda não existe — quem aplica é a folha de estilo.
+              `try{var z=Number(localStorage.getItem("pauta.v2.zoom"));if(z&&z!==100)document.documentElement.style.setProperty("--zoom",z/100)}catch(e){}`,
           }}
         />
         <script dangerouslySetInnerHTML={{ __html: PISCA }} />

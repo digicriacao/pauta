@@ -163,9 +163,19 @@ export const MEDIDOR_RECURSOS = ["André", "Letícia", "Gabriela", "Vinicius"];
 /** Esforço que enche a barra do medidor: 10 é o dia cheio de uma pessoa. */
 export const ESFORCO_DIA = 10;
 
+/* ── Zoom ───────────────────────────────────────────────────────────────────
+   A grade tem dezessete colunas e nem toda tela cabe todas. Em vez de espremer
+   uma por uma, a pessoa encolhe a página inteira — o mesmo que o zoom do
+   navegador faz, com a diferença de que este fica salvo e vale só aqui. Os
+   degraus são poucos de propósito: escolher entre seis opções é um reflexo,
+   escolher entre trinta é uma decisão. */
+export const ZOOMS = [70, 80, 90, 100, 110, 125];
+export const ZOOM_PADRAO = 100;
+
 export const LS_BLOCOS = "pauta.v2.blocos";
 export const LS_LARGURAS = "pauta.v2.larguras";
 export const LS_ORDEM = "pauta.v2.ordem";
+export const LS_ZOOM = "pauta.v2.zoom";
 
 /** Prefixo do caminho no GitHub Pages — precisa entrar à mão em <img src>. */
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";

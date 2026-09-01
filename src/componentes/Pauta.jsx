@@ -19,6 +19,7 @@ import Reguas from "./Reguas";
 import Fila from "./Fila";
 import Medidor from "./Medidor";
 import Confronto from "./Confronto";
+import Ajuda from "./Ajuda";
 
 export default function Pauta() {
   const { cfg, pedidos, carregando, erro, recarregar, salvarCampo, criarPedido, removerPedido } = useDados();
@@ -38,6 +39,8 @@ export default function Pauta() {
   const [salvandoFoco, setSalvandoFoco] = useState(false);
   const [mostraLogin, setMostraLogin] = useState(false);
   const [mostraAdmin, setMostraAdmin] = useState(false);
+  // Qual tabela de referência está aberta: "artes", "esforco" ou nenhuma.
+  const [ajuda, setAjuda] = useState(null);
   const [toast, setToast] = useState("");
   const [dicaTxt, setDicaTxt] = useState(null);
   const [dicaPos, setDicaPos] = useState({ x: 0, y: 0 });
@@ -268,7 +271,7 @@ export default function Pauta() {
         perfil={perfil} podeEditar={podeEditar} ehAdmin={ehAdmin}
         aoLogin={() => setMostraLogin(true)} aoAdmin={() => setMostraAdmin(true)}
         vista={vista} setVista={setVista} foraDaPauta={confronto.faltando}
-        eu={eu} gente={gente}
+        eu={eu} gente={gente} aoAjuda={setAjuda}
       />
 
       <main className="wrap">
@@ -397,6 +400,10 @@ export default function Pauta() {
       {mostraLogin && (
         <Login perfil={perfil} podeEditar={podeEditar}
           aoFechar={() => setMostraLogin(false)} aoEntrar={relerSessao} aoSair={sair} />
+      )}
+
+      {ajuda && (
+        <Ajuda chave={ajuda} ehAdmin={ehAdmin} aviso={aviso} aoFechar={() => setAjuda(null)} />
       )}
 
       {mostraAdmin && podeEditar && (

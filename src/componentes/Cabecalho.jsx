@@ -1,13 +1,61 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { NOME_MES } from "@/lib/formato";
-import { BASE } from "@/lib/constantes";
+import { BASE, ZOOMS, ZOOM_PADRAO, LS_ZOOM } from "@/lib/constantes";
+import { TABELAS_AJUDA } from "@/lib/ajuda";
 import Presenca from "./Presenca";
+
+/**
+ * Controle de zoom. Usa a propriedade `zoom` do CSS, e não `transform:scale`,
+ * porque `scale` desloca tudo que é `position:fixed` — os modais e a gaveta do
+ * Admin sairiam do lugar. `zoom` refaz o layout de verdade, então a barra de
+ * filtros continua grudando onde deve.
+ */
+function Zoom() {
+  const [z, setZ] = useState(ZOOM_PADRAO);
+  // Enquanto não tiver lido o que estava salvo, este componente não escreve
+  // nada. Sem esta trava ele nasce em 100%, apaga o valor guardado e desfaz o
+  // trabalho do script que roda antes da primeira pintura — a página saltava
+  // de tamanho toda vez que era recarregada.
+  const [lido, setLido] = useState(false);
+
+  useEffect(() => {
+    try {
+      const salvo = Number(localStorage.getItem(LS_ZOOM));
+      if (ZOOMS.includes(salvo)) setZ(salvo);
+    } catch {}
+    setLido(true);
+  }, []);
+
+  // Quem aplica é a folha (`body{zoom:var(--zoom,1)}`), e não este componente:
+  // assim o mesmo caminho serve ao script do layout, e não existem duas fontes
+  // da verdade para o mesmo número.
+  useEffect(() => {
+    if (!lido) return;
+    document.documentElement.style.setProperty("--zoom", z / 100);
+    try { localStorage.setItem(LS_ZOOM, String(z)); } catch {}
+  }, [z, lido]);
+
+  const i = ZOOMS.indexOf(z);
+  const anda = (passo) => setZ(ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, i + passo))]);
+
+  return (
+    <div className="zoom" role="group" aria-label="Zoom da página">
+      <button className="zbtn" onClick={() => anda(-1)} disabled={i <= 0}
+        title="Diminuir — cabe mais coluna na tela" aria-label="Diminuir zoom">−</button>
+      <button className="zval mono" onClick={() => setZ(ZOOM_PADRAO)}
+        title="Zoom da página. Clique para voltar a 100%">{z}%</button>
+      <button className="zbtn" onClick={() => anda(1)} disabled={i >= ZOOMS.length - 1}
+        title="Aumentar — texto maior" aria-label="Aumentar zoom">+</button>
+    </div>
+  );
+}
 
 export default function Cabecalho({
   meses, mesAtual, mesSel, setMesSel, contaMes,
   perfil, podeEditar, ehAdmin, aoLogin, aoAdmin, vista, setVista, foraDaPauta = 0,
-  eu, gente = [],
+  eu, gente = [], aoAjuda,
 }) {
   const i = meses.indexOf(mesAtual);
   const anteriores = meses.slice(0, Math.max(0, i - 1));
@@ -26,7 +74,14 @@ export default function Cabecalho({
 
   return (
     <header>
+      {/* Três colunas: esquerda, centro, direita. As laterais valem 1fr cada,
+          e é isso que põe o grupo do meio no centro de verdade — em fluxo
+          simples ele escorregava conforme o número de meses à esquerda e o
+          tamanho do nome de quem estava logado à direita, duas coisas que
+          mudam sozinhas. Sendo colunas, também não há como uma passar por
+          cima da outra. */}
       <div className="wrap hrow">
+        <div className="hlado">
         <div className="brand">
           {/* <img> puro, não next/image: com `unoptimized` o Next não põe o
               prefixo do repositório no src, e no GitHub Pages isso dá 404. */}
@@ -67,18 +122,54 @@ export default function Cabecalho({
         </div>
 
         <Presenca eu={eu} gente={gente} />
+        </div>
 
-        <button className={`hbtn ${podeEditar ? "on" : ""}`} onClick={aoLogin} style={{ marginLeft: "auto" }}>
-          {podeEditar ? `✎ Editando · ${perfil.usuario}` : perfil ? `👤 ${perfil.usuario} · sem edição` : "🔒 Só leitura"}
+        {/* As quatro consultas: duas abrem tabela aqui mesmo, duas abrem tela
+            nova. Ficam no meio porque não são ação sobre a pauta — são o que
+            se olha quando bate a dúvida, e por isso não competem com os botões
+            de trabalho da direita. */}
+        <div className="hmid">
+          <button className="hbtn ico" onClick={() => aoAjuda?.("artes")}
+            title={`${TABELAS_AJUDA.artes.botao} — como contamos as peças`}
+            aria-label={TABELAS_AJUDA.artes.botao}>🎨</button>
+
+          <button className="hbtn ico" onClick={() => aoAjuda?.("esforco")}
+            title={`${TABELAS_AJUDA.esforco.botao} — o que cada nível quer dizer`}
+            aria-label={TABELAS_AJUDA.esforco.botao}>⚡️</button>
+
+          <a className="hbtn ico" href={`${BASE}/manual/`} target="_blank" rel="noopener noreferrer"
+            title="Manual da plataforma — abre em outra guia" aria-label="Manual">❓</a>
+
+          <a className="hbtn ico" href={`${BASE}/cliente/`} target="_blank" rel="noopener noreferrer"
+            title="Visão do cliente — abre em outra guia" aria-label="Visão do cliente">🏢</a>
+        </div>
+
+        {/* Em tela estreita os rótulos (.rot) somem e ficam só os ícones — é o
+            que faz este lado caber sem empurrar o grupo do meio para fora do
+            centro. O `title` continua explicando cada botão no passar do mouse,
+            então nada de fato se perde. */}
+        <div className="hlado dir">
+        <button className={`hbtn ${podeEditar ? "on" : ""}`} onClick={aoLogin}
+          title={podeEditar ? `Editando como ${perfil.usuario}` : perfil ? `${perfil.usuario} — sem permissão de edição` : "Entrar para poder editar"}>
+          {podeEditar ? "✎" : perfil ? "👤" : "🔒"}
+          <span className="rot">
+            {podeEditar ? `Editando · ${perfil.usuario}` : perfil ? `${perfil.usuario} · sem edição` : "Só leitura"}
+          </span>
         </button>
 
-        {podeEditar && <button className="hbtn" onClick={aoAdmin}>⚙ Admin</button>}
+        {podeEditar && (
+          <button className="hbtn" onClick={aoAdmin} title="Cadastros e histórico">
+            ⚙<span className="rot">Admin</span>
+          </button>
+        )}
 
         <button
           className={`hbtn ${vista === "rel" ? "on" : ""}`}
           onClick={() => setVista(vista === "rel" ? "pauta" : "rel")}
+          title={vista === "rel" ? "Voltar à pauta" : "Relatórios do mês"}
         >
-          {vista === "rel" ? "← Voltar à pauta" : "📊 Relatórios"}
+          {vista === "rel" ? "←" : "📊"}
+          <span className="rot">{vista === "rel" ? "Voltar à pauta" : "Relatórios"}</span>
         </button>
 
         <button
@@ -86,7 +177,8 @@ export default function Cabecalho({
           onClick={() => setVista(vista === "azure" ? "pauta" : "azure")}
           title="Cards abertos no Azure que não estão na pauta"
         >
-          {vista === "azure" ? "← Voltar à pauta" : "⚖ Azure"}
+          {vista === "azure" ? "←" : "⚖"}
+          <span className="rot">{vista === "azure" ? "Voltar à pauta" : "Azure"}</span>
           {vista !== "azure" && foraDaPauta > 0 && (
             <span className="bolha vm" title={`${foraDaPauta} card${foraDaPauta === 1 ? "" : "s"} aberto${foraDaPauta === 1 ? "" : "s"} no Azure fora da pauta`}>
               {foraDaPauta}
@@ -95,6 +187,9 @@ export default function Cabecalho({
         </button>
 
         <button className="hbtn ico" onClick={trocaTema} title="Alternar tema" aria-label="Alternar tema">◐</button>
+
+        <Zoom />
+        </div>
       </div>
     </header>
   );

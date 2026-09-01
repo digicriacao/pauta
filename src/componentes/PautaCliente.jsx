@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import { BASE } from "@/lib/constantes";
 
@@ -8,6 +8,10 @@ import { BASE } from "@/lib/constantes";
  * Página do cliente. Sem login, endereço próprio, e lendo da visão
  * `pauta_cliente` — que devolve só quatro campos. Nada de status interno,
  * recurso, tipo ou observação passa por aqui, nem no HTML nem na rede.
+ *
+ * Sem `?c=` no endereço, a página vira a tela de escolha: a lista dos clientes
+ * que têm entrega marcada. Escolhido um, o endereço passa a carregar o nome
+ * dele — e é esse endereço, e não o da escolha, que se manda para fora.
  */
 
 const DIAS = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
@@ -53,12 +57,15 @@ const apelido = (t) =>
   String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+/** O nome que a linha usa para se dizer de alguém. */
+const donoDa = (r) => r.campanha || r.cliente || "";
+
 export default function PautaCliente() {
-  const [itens, setItens] = useState([]);
-  const [cliente, setCliente] = useState(null);
+  const [todos, setTodos] = useState([]);
   const [estado, setEstado] = useState("carregando");
   const [atualizado, setAtualizado] = useState(null);
   const [quem, setQuem] = useState(null);
+  const [busca, setBusca] = useState("");
 
   // A pauta virou multicliente: sem saber de quem é a página, ela mostraria
   // as entregas de todo mundo para qualquer um. O cliente vem no endereço.
@@ -74,22 +81,14 @@ export default function PautaCliente() {
       .from("pauta_cliente")
       .select("*")
       .order("entrega_em", { ascending: true, nullsFirst: false });
-    if (error) {
-      setEstado("erro");
-      return;
-    }
-    const meus = (data || []).filter(
-      (r) => apelido(r.cliente) === quem || apelido(r.campanha) === quem ||
-             apelido(r.campanha).includes(quem)
-    );
-    setItens(meus);
-    setCliente(meus[0]?.campanha || meus[0]?.cliente || null);
+    if (error) return setEstado("erro");
+    setTodos(data || []);
     setAtualizado(new Date());
     setEstado("ok");
-  }, [quem]);
+  }, []);
 
   useEffect(() => {
-    if (!quem) return;
+    if (quem === null) return;
     carregar();
     // A pauta muda durante o dia; recarrega sozinho de minuto em minuto.
     const t = setInterval(carregar, 60000);
@@ -98,7 +97,38 @@ export default function PautaCliente() {
     return () => { clearInterval(t); document.removeEventListener("visibilitychange", aoVoltar); };
   }, [carregar, quem]);
 
+  const itens = useMemo(() => {
+    if (!quem) return [];
+    return todos.filter(
+      (r) => apelido(r.cliente) === quem || apelido(r.campanha) === quem ||
+             apelido(r.campanha).includes(quem)
+    );
+  }, [todos, quem]);
+
+  /** Um cartão por cliente que tem entrega marcada. */
+  const carteira = useMemo(() => {
+    const mapa = new Map();
+    for (const r of todos) {
+      const nome = donoDa(r);
+      const slug = apelido(nome);
+      if (!nome || !slug) continue;
+      const atual = mapa.get(slug) || { slug, nome, quantos: 0, proxima: null };
+      atual.quantos += 1;
+      const dia = soData(r);
+      if (dia && (!atual.proxima || dia < atual.proxima)) atual.proxima = dia;
+      mapa.set(slug, atual);
+    }
+    return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  }, [todos]);
+
+  const filtrada = useMemo(() => {
+    const alvo = apelido(busca);
+    return alvo ? carteira.filter((c) => apelido(c.nome).includes(alvo)) : carteira;
+  }, [carteira, busca]);
+
+  const cliente = itens[0] ? donoDa(itens[0]) : null;
   const dias = [...new Set(itens.map(soData).filter(Boolean))].sort();
+  const escolhendo = quem === "";
 
   return (
     <div className="cli">
@@ -108,32 +138,75 @@ export default function PautaCliente() {
           <img className="logo logo-dark" src={`${BASE}/logo-claro.png`} alt="Digi" width="90" height="25" />
           <div className="cli-tit">
             <b>Pauta{cliente ? ` · ${cliente}` : ""}</b>
-            <span>próximas entregas · hoje e os 7 dias seguintes</span>
+            <span>
+              {escolhendo
+                ? "escolha o cliente para ver as entregas"
+                : "próximas entregas · hoje e os 7 dias seguintes"}
+            </span>
           </div>
+          {quem ? <a className="cli-trocar" href={`${BASE}/cliente/`}>trocar de cliente</a> : null}
         </div>
       </header>
 
       <main className="cli-wrap cli-corpo">
-        {quem === "" && (
+        {/* ── tela de escolha ─────────────────────────────────────────────── */}
+        {escolhendo && estado === "carregando" && <p className="cli-vazio">Carregando…</p>}
+
+        {escolhendo && estado === "ok" && carteira.length === 0 && (
           <div className="cli-card">
-            <h2>Falta o cliente no endereço</h2>
-            <p>
-              Esta página serve a vários clientes, então o link precisa dizer de quem ela é —
-              algo como <code>…/cliente/?c=prudential</code>. Peça o seu link à equipe da Digi.
-            </p>
+            <h2>Nenhum cliente com entrega marcada</h2>
+            <p>Assim que houver entrega combinada na pauta, o cliente aparece aqui.</p>
           </div>
         )}
 
+        {escolhendo && estado === "ok" && carteira.length > 0 && (
+          <>
+            <div className="esc-h">
+              <h2>Escolha o cliente</h2>
+              {carteira.length > 6 && (
+                <input
+                  className="esc-busca" type="search" placeholder="Filtrar…"
+                  value={busca} onChange={(e) => setBusca(e.target.value)}
+                />
+              )}
+            </div>
+
+            <ul className="esc-lista">
+              {filtrada.map((c) => (
+                <li key={c.slug}>
+                  <a className="esc-card" href={`${BASE}/cliente/?c=${encodeURIComponent(c.slug)}`}>
+                    <b>{c.nome}</b>
+                    <span className="esc-n">
+                      {c.quantos} {c.quantos === 1 ? "entrega" : "entregas"}
+                    </span>
+                    <span className="esc-q">
+                      {c.proxima ? `a partir de ${fmtCurta(c.proxima)}` : "sem data marcada"}
+                    </span>
+                    <i className="esc-seta">→</i>
+                  </a>
+                </li>
+              ))}
+              {filtrada.length === 0 && <li className="cli-vazio">Nenhum cliente com esse nome.</li>}
+            </ul>
+
+            <p className="esc-nota">
+              O link de cada cliente já vem com o nome dele no endereço. É esse link,
+              e não o desta tela, que se manda para fora.
+            </p>
+          </>
+        )}
+
+        {/* ── visão de um cliente ─────────────────────────────────────────── */}
         {quem && estado === "carregando" && <p className="cli-vazio">Carregando…</p>}
 
-        {quem && estado === "erro" && (
+        {estado === "erro" && (
           <div className="cli-card">
             <h2>Não consegui carregar a pauta</h2>
             <p>Tente recarregar a página em alguns minutos. Se continuar assim, avise a equipe da Digi.</p>
           </div>
         )}
 
-        {quem && estado === "sem-config" && (
+        {estado === "sem-config" && (
           <div className="cli-card"><h2>Página não configurada</h2></div>
         )}
 
@@ -141,6 +214,7 @@ export default function PautaCliente() {
           <div className="cli-card">
             <h2>Nada com entrega marcada</h2>
             <p>Não há entregas combinadas para hoje nem para os próximos 7 dias.</p>
+            <p><a className="cli-link" href={`${BASE}/cliente/`}>Ver outro cliente</a></p>
           </div>
         )}
 
