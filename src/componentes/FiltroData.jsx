@@ -13,6 +13,11 @@ import {
  * desligar "o que sai hoje" tem de ser um clique, mas escolher outro dia não
  * pode custar um filtro à parte. Então a caixa liga o recorte (em "hoje", que é
  * o que se usa o dia inteiro) e o 📅 abre onde se troca o período.
+ *
+ * Os atalhos e os dois campos de data são a MESMA coisa vista de dois jeitos:
+ * os campos mostram sempre a faixa que está valendo, inclusive a que veio de um
+ * atalho. Dá para clicar em "Hoje e amanhã" e esticar o "até" mais um dia sem
+ * ter de montar a faixa do zero.
  */
 export default function FiltroData({ periodo, aoMudar }) {
   const [aberto, setAberto] = useState(false);
@@ -56,26 +61,36 @@ export default function FiltroData({ periodo, aoMudar }) {
   /** A caixa liga e desliga. Ligando sem período escolhido, vale hoje. */
   function alternar() {
     if (ativo) return aoMudar(PERIODO_VAZIO);
-    aoMudar(periodo?.modo === "dia" && periodo.dia ? periodo : { modo: "hoje", dia: "" });
+    aoMudar(periodo?.modo === "faixa" && (periodo.de || periodo.ate)
+      ? periodo
+      : { modo: "hoje", de: "", ate: "" });
   }
 
   function escolher(modo) {
-    aoMudar({ modo, dia: "" });
+    aoMudar({ modo, de: "", ate: "" });
     setAberto(false);
   }
 
-  function escolherDia(dia) {
-    if (!dia) return aoMudar(PERIODO_VAZIO);
-    aoMudar({ modo: "dia", dia });
+  /* Mexer num dos campos passa a faixa a ser escolhida à mão, partindo do que
+     já estava na tela. O menu NÃO fecha aqui: quem está montando uma faixa
+     costuma mexer nas duas pontas. */
+  function ajustarPonta(ponta, valor) {
+    const atual = faixaDe(periodo, hoje) || { de: "", ate: "" };
+    const nova = { modo: "faixa", de: atual.de, ate: atual.ate, [ponta]: valor };
+    if (!nova.de && !nova.ate) return aoMudar(PERIODO_VAZIO);
+    aoMudar(nova);
   }
 
-  /** As datas da semana ficam no próprio item: "semana" sozinho não diz qual. */
+  /** As datas ficam no próprio item quando ele vale mais de um dia: "semana"
+   *  sozinho não diz qual, e "hoje e amanhã" some no fim do mês. */
   function rotuloFaixa(modo) {
     const r = faixaDe({ modo }, hoje);
-    if (!r) return "";
+    if (!r || r.de === r.ate) return "";
     const curto = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
     return `${curto(r.de)} a ${curto(r.ate)}`;
   }
+
+  const faixa = faixaDe(periodo, hoje) || { de: "", ate: "" };
 
   return (
     <div className={`fcheck fdata ${ativo ? "on" : ""}`} ref={caixa}>
@@ -88,7 +103,7 @@ export default function FiltroData({ periodo, aoMudar }) {
       </span>
       <button
         type="button" className="fdata-cal" aria-expanded={aberto} aria-haspopup="true"
-        title="Escolher o período: hoje, amanhã, a semana ou um dia no calendário"
+        title="Escolher o período: hoje, amanhã, os dois juntos, a semana ou uma faixa de dias"
         onClick={() => setAberto((v) => !v)}
       >
         📅
@@ -106,19 +121,22 @@ export default function FiltroData({ periodo, aoMudar }) {
               onClick={() => escolher(o.id)}
             >
               {o.rotulo}
-              {o.id === "semana" && (
-                <span className="fdata-faixa">{rotuloFaixa(o.id)}</span>
-              )}
+              <span className="fdata-faixa">{rotuloFaixa(o.id)}</span>
             </button>
           ))}
 
-          <label className={`fdata-dia ${periodo?.modo === "dia" ? "on" : ""}`}>
-            <span>Um dia</span>
-            <input
-              type="date" value={periodo?.modo === "dia" ? periodo.dia : ""}
-              onChange={(e) => escolherDia(e.target.value)}
-            />
-          </label>
+          <div className={`fdata-dia ${periodo?.modo === "faixa" ? "on" : ""}`}>
+            <label>
+              <span>De</span>
+              <input type="date" value={faixa.de}
+                onChange={(e) => ajustarPonta("de", e.target.value)} />
+            </label>
+            <label>
+              <span>até</span>
+              <input type="date" value={faixa.ate}
+                onChange={(e) => ajustarPonta("ate", e.target.value)} />
+            </label>
+          </div>
 
           <div className="fdata-pe">
             <span>{detalhePeriodo(periodo, hoje)}</span>
