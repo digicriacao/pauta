@@ -106,7 +106,7 @@ export const MANUAL = [
     corpo: [
       ["p", "A primeira linha da grade é sempre a linha nova. Existem dois caminhos, e a diferença entre eles é se o card já existe."],
       ["ol", [
-        "Já tem card: cole o link (ou só o número) no campo “Colar link card”. A linha se preenche sozinha com título, cliente, entrega, esforço e responsável.",
+        "Já tem card: cole o link (ou só o número) no campo “Colar link card”. Abre uma tela com o que veio do Azure no topo e o que é da casa para preencher embaixo — já com o status interno em PRODUÇÃO e a entrega combinada preenchida com a data do card (ou hoje, quando o card não traz data). Os dois são palpite: troque à vontade, e há um “limpar a data” para deixar a entrega em aberto.",
         "Ainda não tem card: escreva o nome no campo “Iniciar pedido” e aperte Enter. A linha entra marcada em vermelho, porque está incompleta.",
       ]],
       ["p", "Na linha vermelha aparece um atalho “↗ card”, que abre o formulário de card novo no Azure já com o título preenchido. Depois de criar o card, volte e cole o link no mesmo lugar: a linha deixa de ser vermelha e passa a receber as atualizações do sync."],

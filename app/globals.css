@@ -847,3 +847,10 @@ body{zoom:var(--zoom,1);
 .fcheck:hover{border-color:var(--accent);color:var(--accent-ink)}
 .fcheck input{width:13px;height:13px;margin:0;accent-color:var(--accent);cursor:pointer}
 .fcheck.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink);font-weight:560}
+
+/* "limpar a data" na tela de colar card. A data agora vem preenchida por
+   palpite, e um palpite precisa de uma saída: sem isto, deixar a entrega em
+   aberto viraria apagar segmento por segmento no teclado. */
+.fld-limpa{align-self:flex-start;margin-top:4px;border:0;background:transparent;
+  color:var(--accent-ink);cursor:pointer;font-size:11.5px;text-decoration:underline;padding:0}
+.fld-limpa:hover{filter:brightness(1.12)}

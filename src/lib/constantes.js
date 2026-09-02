@@ -70,6 +70,31 @@ export function estadoEstaEm(pedido, nomes) {
   });
 }
 
+/* ── Padrões da tela de colar card ─────────────────────────────────────────
+   Digitar o ano e escolher o mesmo status a cada card é trabalho que a máquina
+   faz melhor. Os dois continuam editáveis na tela — isto é palpite, não regra. */
+
+/** O status que a tela já traz escolhido. Casado sem acento e sem caixa. */
+export const STATUS_PADRAO = "PRODUÇÃO";
+
+export const ehProducao = (status) =>
+  !!status && chaveEstado(status.nome) === chaveEstado(STATUS_PADRAO);
+
+/** Achado pelo nome; não existindo, o primeiro status que não é entrega, pausa
+ *  nem cancelamento — que é a mesma conta que o ✓ da grade faz para "voltar
+ *  para produção". Assim a tela não fica sem palpite se alguém renomear. */
+export const statusPadraoDe = (lista = []) =>
+  lista.find(ehProducao) ||
+  lista.find((s) => !s.entrega && !s.pausa && !s.cancelamento) ||
+  null;
+
+/** Ano que a data já vem preenchida quando o card não traz entrega marcada.
+ *  ⚠️ Vira 2027 quando virar o ano — é a única linha a mexer. */
+export const ANO_PADRAO = 2026;
+
+/** Hora que acompanha a data sugerida: fim do dia útil. */
+export const HORA_PADRAO = "17:00";
+
 /* ── O status interno que significa "já saiu" ──────────────────────────────
    Reconhecido de dois jeitos: pela marcação `entrega` do cadastro (que é o que
    o ✓ da grade usa) e pelo nome escrito. Os dois porque cada um cobre uma
