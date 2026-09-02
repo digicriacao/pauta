@@ -148,9 +148,10 @@ export const MANUAL = [
       ["p", "Duas caixas de marcar fazem os recortes mais usados do dia:"],
       ["ul", [
         "👁 ativos — esconde o que já saiu, ou seja, tudo que está com o status interno ENVIADO. Linha ainda sem status continua aparecendo, porque é justamente o que não andou.",
-        "👁 hoje — deixa só o que entrega hoje. Vale a hora combinada quando ela existe; sem ela, a data de entrega do card.",
+        "👁 hoje 📅 — o recorte de data. A caixa liga e desliga; o 📅 ao lado abre onde se troca o período: Hoje, Amanhã, Esta semana (de segunda a domingo) ou um dia escolhido no calendário. Vale a hora combinada quando ela existe; sem ela, a data de entrega do card.",
       ]],
-      ["nota", "As duas se somam com o resto: marcar as duas mostra o que entrega hoje e ainda não saiu. O “limpar” desmarca as duas junto com os outros filtros."],
+      ["nota", "As duas se somam com o resto: marcar as duas mostra o que entrega hoje e ainda não saiu. O “limpar” desliga as duas junto com os outros filtros."],
+      ["p", "Com o filtro de data ligado, quem manda é a data e não a aba do mês: a busca passa a valer para a pauta inteira. É o que faz “esta semana” funcionar na virada do mês, quando a semana começa em setembro e termina em outubro. A aba acompanha o período escolhido, e um selo 📅 POR DATA aparece na barra avisando que a lista deixou de ser a do mês."],
       ["p", "Para ordenar, clique no cabeçalho da coluna. O primeiro clique ordena; o segundo inverte. A setinha mostra qual coluna está mandando. A ordenação escolhida fica salva para a próxima vez que você abrir."],
       ["p", "O contador à direita da barra diz quantas linhas você está vendo — e, quando há filtro, quantas de quantas."],
     ],

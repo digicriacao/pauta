@@ -6,7 +6,8 @@ import { usePresenca } from "@/lib/presenca";
 import { nomeCurto } from "@/lib/recursos";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
-import { mesDe, mesesDoAno, hojeISO, diaDeEntrega } from "@/lib/formato";
+import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
+import { PERIODO_VAZIO, periodoAtivo, noPeriodo, detalhePeriodo, cruzaMes, mesDoPeriodo } from "@/lib/periodo";
 import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado, FILAS, ehEnviado } from "@/lib/constantes";
 import Cabecalho from "./Cabecalho";
 import Resumo from "./Resumo";
@@ -20,6 +21,7 @@ import Fila from "./Fila";
 import Medidor from "./Medidor";
 import Confronto from "./Confronto";
 import Ajuda from "./Ajuda";
+import FiltroData from "./FiltroData";
 
 export default function Pauta() {
   const { cfg, pedidos, carregando, erro, recarregar, salvarCampo, criarPedido, removerPedido, azure } = useDados();
@@ -33,7 +35,7 @@ export default function Pauta() {
   const [vista, setVista] = useState("pauta");
   // Dentro da pauta ainda há três áreas: a grade, as réguas e os cancelados.
   const [area, setArea] = useState("pauta");
-  const FILTRO_VAZIO = { cli: "", dem: "", tipo: "", status: "", rec: "", q: "", ativos: false, hoje: false };
+  const FILTRO_VAZIO = { cli: "", dem: "", tipo: "", status: "", rec: "", q: "", ativos: false, periodo: PERIODO_VAZIO };
   const [filtros, setFiltros] = useState(FILTRO_VAZIO);
   const [ordem, setOrdem] = useState(ORDEM_PADRAO);
   const [foco, setFoco] = useState(null);
@@ -94,6 +96,15 @@ export default function Pauta() {
 
   const hoje = hojeISO();
   const meses = useMemo(() => mesesDoAno(hoje.slice(0, 7)), [hoje]);
+
+  /* A aba segue o período escolhido. Sem isto o cabeçalho diria SET enquanto a
+     tela mostra entregas de outubro — e a aba errada acesa é pior do que aba
+     nenhuma. Só corre quando o período muda, então continua dando para trocar
+     de mês na mão depois. */
+  useEffect(() => {
+    const m = mesDoPeriodo(filtros.periodo, hoje);
+    if (m) setMesSel(m);
+  }, [filtros.periodo, hoje]);
   const contaMes = useCallback((ym) => pedidos.filter((p) => mesDe(p) === ym).length, [pedidos]);
 
   /** Os clientes que existem de fato na pauta — a campanha dos cards. */
@@ -124,11 +135,14 @@ export default function Pauta() {
     [cfg, nomeRec]
   );
 
-  const doMes = useMemo(() => {
+  /* Antes o mês entrava junto da ordenação. Agora são duas peças, porque o
+     filtro de data precisa enxergar a pauta inteira: uma semana atravessa a
+     virada do mês com frequência, e a aba sozinha esconderia metade das
+     entregas sem dizer nada. */
+  const ordenados = useMemo(() => {
     const vazio = (v) => v === null || v === undefined || v === "";
     const sinal = ordem.dir === "asc" ? 1 : -1;
     return pedidos
-      .filter((p) => mesDe(p) === mesSel)
       .slice()
       .sort((a, b) => {
         const va = valorOrdem(a, ordem.campo);
@@ -143,11 +157,18 @@ export default function Pauta() {
             : String(va).localeCompare(String(vb), "pt", { numeric: true });
         return cmp * sinal;
       });
-  }, [pedidos, mesSel, ordem, valorOrdem]);
+  }, [pedidos, ordem, valorOrdem]);
+
+  const doMes = useMemo(() => ordenados.filter((p) => mesDe(p) === mesSel), [ordenados, mesSel]);
+
+  /* Com filtro de data ligado, quem manda é a data: a base passa a ser a pauta
+     inteira. Sem ele, o mês continua mandando, como sempre foi. */
+  const comPeriodo = periodoAtivo(filtros.periodo, hoje);
+  const base = comPeriodo ? ordenados : doMes;
 
   const visiveis = useMemo(
     () =>
-      doMes.filter((p) => {
+      base.filter((p) => {
         const dem = cfg.demandantes.find((d) => d.id === p.demandante_id)?.nome || "";
         const tipo = cfg.tipos.find((t) => t.id === p.tipo_id)?.nome || "";
         const stObj = cfg.status.find((s) => s.id === p.status_interno_id);
@@ -161,11 +182,11 @@ export default function Pauta() {
           // Ativos: some o que já saiu. Linha sem status nenhum continua, porque
           // "sem status" é justamente o que ainda não andou.
           (!filtros.ativos || !ehEnviado(stObj)) &&
-          (!filtros.hoje || diaDeEntrega(p) === hoje) &&
+          noPeriodo(p, filtros.periodo, hoje) &&
           (!filtros.q || (p.titulo || "").toLowerCase().includes(filtros.q))
         );
       }),
-    [doMes, filtros, cfg, nomeRec, hoje]
+    [base, filtros, cfg, nomeRec, hoje]
   );
 
   /**
@@ -327,12 +348,10 @@ export default function Pauta() {
                     👁 ativos
                   </label>
 
-                  <label className={`fcheck ${filtros.hoje ? "on" : ""}`}
-                    title="Só o que entrega hoje. Vale a hora combinada quando existe; sem ela, a data de entrega do card.">
-                    <input type="checkbox" checked={filtros.hoje}
-                      onChange={(e) => setFiltros({ ...filtros, hoje: e.target.checked })} />
-                    👁 hoje
-                  </label>
+                  <FiltroData
+                    periodo={filtros.periodo}
+                    aoMudar={(periodo) => setFiltros({ ...filtros, periodo })}
+                  />
 
                   <button className="chipclear" onClick={() => setFiltros(FILTRO_VAZIO)}>limpar</button>
                 </>
@@ -369,6 +388,13 @@ export default function Pauta() {
               })}
 
               <span className="spacer" />
+              {/* Com período ligado a lista deixa de ser "o mês": dizer isso em
+                  voz alta evita a pergunta "cadê o resto de setembro?". */}
+              {comPeriodo && area === "pauta" && (
+                <span className="per-selo" title={detalhePeriodo(filtros.periodo, hoje)}>
+                  📅 por data{cruzaMes(filtros.periodo, hoje) ? " · atravessa dois meses" : ""}
+                </span>
+              )}
               <span className="mono" style={{ color: "var(--muted)", fontSize: 12 }}>
                 {carregando
                   ? "carregando…"
@@ -376,6 +402,10 @@ export default function Pauta() {
                   ? `${reguas.length} ${reguas.length === 1 ? "régua" : "réguas"}`
                   : filas[area]
                   ? `${filas[area].itens.length} ${filas[area].itens.length === 1 ? filas[area].fila.singular : filas[area].fila.plural}`
+                  : comPeriodo
+                  // Com período ligado o total do mês não é referência de nada:
+                  // a lista veio da pauta inteira. "de 18" só confundiria.
+                  ? `${visiveis.length} no período`
                   : visiveis.length === doMes.length
                   ? `${doMes.length} pedidos`
                   : `${visiveis.length} de ${doMes.length}`}

@@ -854,3 +854,40 @@ body{zoom:var(--zoom,1);
 .fld-limpa{align-self:flex-start;margin-top:4px;border:0;background:transparent;
   color:var(--accent-ink);cursor:pointer;font-size:11.5px;text-decoration:underline;padding:0}
 .fld-limpa:hover{filter:brightness(1.12)}
+
+/* ── filtro de data: caixa de marcar + calendário no mesmo controle ────────── */
+.fdata{position:relative;gap:5px}
+.fdata-rot{cursor:pointer}
+.fdata-cal{border:0;background:transparent;cursor:pointer;font-size:13px;line-height:1;
+  padding:2px 1px 2px 3px;margin-left:1px;border-left:1px solid var(--line);opacity:.75}
+.fdata.on .fdata-cal{border-left-color:color-mix(in srgb, var(--accent) 35%, transparent)}
+.fdata-cal:hover{opacity:1}
+
+.fdata-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:45;min-width:236px;
+  background:var(--surface);border:1px solid var(--line-strong);border-radius:11px;
+  box-shadow:0 18px 44px -16px rgba(0,0,0,.42);padding:8px;
+  display:flex;flex-direction:column;gap:2px;font-weight:400;color:var(--ink-2)}
+.fdata-tit{margin:2px 4px 6px;font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted)}
+.fdata-op{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;border:0;
+  background:transparent;cursor:pointer;border-radius:7px;padding:7px 9px;font-size:13px;color:var(--ink-2)}
+.fdata-op:hover{background:var(--surface-3);color:var(--ink)}
+.fdata-op.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.fdata-faixa{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.fdata-op.on .fdata-faixa{color:var(--accent-ink);opacity:.8}
+
+.fdata-dia{display:flex;align-items:center;gap:8px;padding:6px 9px;margin-top:2px;
+  border-top:1px solid var(--line);font-size:13px;cursor:pointer}
+.fdata-dia.on{color:var(--accent-ink);font-weight:600}
+.fdata-dia input{margin-left:auto;height:28px;min-width:134px;border:1px solid var(--line-strong);
+  background:var(--surface-2);border-radius:7px;padding:0 7px;font-size:12px;
+  font-family:var(--mono);color:var(--ink);cursor:pointer}
+.fdata-dia input:focus{outline:0;border-color:var(--accent)}
+
+.fdata-pe{display:flex;flex-direction:column;gap:5px;align-items:flex-start;
+  margin-top:6px;padding:8px 9px 2px;border-top:1px solid var(--line);
+  font-size:11.5px;line-height:1.45;color:var(--faint)}
+
+/* Aviso de que a lista deixou de ser "o mês selecionado". */
+.per-selo{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent-ink);background:var(--accent-soft);border-radius:20px;padding:3px 9px;white-space:nowrap}

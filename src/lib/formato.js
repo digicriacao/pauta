@@ -21,6 +21,21 @@ export function diffDias(a, b) {
 export const diaDeEntrega = (p) =>
   p?.entrega_em ? paraInputLocal(p.entrega_em).slice(0, 10) : (p?.data_entrega || null);
 
+/** Soma dias a uma data ISO. Em UTC, senão o horário de verão come um dia. */
+export function somaDias(iso, n) {
+  if (!iso) return null;
+  const d = new Date(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10) + n));
+  return d.toISOString().slice(0, 10);
+}
+
+/** A semana que contém esta data, de SEGUNDA a DOMINGO — que é como a equipe
+ *  fala de semana, e não o domingo-a-sábado do calendário americano. */
+export function semanaDe(iso) {
+  const d = new Date(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)));
+  const recuo = (d.getUTCDay() + 6) % 7;          // segunda vira 0
+  return { de: somaDias(iso, -recuo), ate: somaDias(iso, 6 - recuo) };
+}
+
 /** Em que aba o pedido cai. Quem manda é a ENTREGA do card: pedido que entrega
  *  em setembro aparece em setembro, mesmo tendo sido pedido em agosto. A
  *  solicitação só entra como desempate quando o card ainda não tem entrega. */
