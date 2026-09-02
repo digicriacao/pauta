@@ -145,6 +145,12 @@ export const MANUAL = [
     titulo: "Filtrar, buscar e ordenar",
     corpo: [
       ["p", "A barra logo abaixo do cabeçalho tem filtros de cliente, demandante, tipo, status interno e recurso, mais um campo de busca livre que procura no título do pedido. Os filtros se somam, e o botão “limpar” zera todos de uma vez."],
+      ["p", "Duas caixas de marcar fazem os recortes mais usados do dia:"],
+      ["ul", [
+        "👁 ativos — esconde o que já saiu, ou seja, tudo que está com o status interno ENVIADO. Linha ainda sem status continua aparecendo, porque é justamente o que não andou.",
+        "👁 hoje — deixa só o que entrega hoje. Vale a hora combinada quando ela existe; sem ela, a data de entrega do card.",
+      ]],
+      ["nota", "As duas se somam com o resto: marcar as duas mostra o que entrega hoje e ainda não saiu. O “limpar” desmarca as duas junto com os outros filtros."],
       ["p", "Para ordenar, clique no cabeçalho da coluna. O primeiro clique ordena; o segundo inverte. A setinha mostra qual coluna está mandando. A ordenação escolhida fica salva para a próxima vez que você abrir."],
       ["p", "O contador à direita da barra diz quantas linhas você está vendo — e, quando há filtro, quantas de quantas."],
     ],

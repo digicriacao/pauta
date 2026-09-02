@@ -70,6 +70,16 @@ export function estadoEstaEm(pedido, nomes) {
   });
 }
 
+/* ── O status interno que significa "já saiu" ──────────────────────────────
+   Reconhecido de dois jeitos: pela marcação `entrega` do cadastro (que é o que
+   o ✓ da grade usa) e pelo nome escrito. Os dois porque cada um cobre uma
+   falha do outro — renomear ENVIADO não quebra a marcação, e um cadastro sem a
+   marcação ainda funciona pelo nome. */
+export const NOME_ENVIADO = "ENVIADO";
+
+export const ehEnviado = (status) =>
+  !!status && (status.entrega === true || chaveEstado(status.nome) === chaveEstado(NOME_ENVIADO));
+
 export const corEstado = (nome) =>
   ESTADOS_AZURE.find((e) => e.nome === nome)?.cor || "var(--none)";
 

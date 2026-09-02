@@ -6,8 +6,8 @@ import { usePresenca } from "@/lib/presenca";
 import { nomeCurto } from "@/lib/recursos";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
-import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
-import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado, FILAS } from "@/lib/constantes";
+import { mesDe, mesesDoAno, hojeISO, diaDeEntrega } from "@/lib/formato";
+import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado, FILAS, ehEnviado } from "@/lib/constantes";
 import Cabecalho from "./Cabecalho";
 import Resumo from "./Resumo";
 import Grade from "./Grade";
@@ -33,7 +33,8 @@ export default function Pauta() {
   const [vista, setVista] = useState("pauta");
   // Dentro da pauta ainda há três áreas: a grade, as réguas e os cancelados.
   const [area, setArea] = useState("pauta");
-  const [filtros, setFiltros] = useState({ cli: "", dem: "", tipo: "", status: "", rec: "", q: "" });
+  const FILTRO_VAZIO = { cli: "", dem: "", tipo: "", status: "", rec: "", q: "", ativos: false, hoje: false };
+  const [filtros, setFiltros] = useState(FILTRO_VAZIO);
   const [ordem, setOrdem] = useState(ORDEM_PADRAO);
   const [foco, setFoco] = useState(null);
   const [salvandoFoco, setSalvandoFoco] = useState(false);
@@ -91,7 +92,8 @@ export default function Pauta() {
     return () => ro.disconnect();
   }, [carregando, vista, area]);
 
-  const meses = useMemo(() => mesesDoAno(hojeISO().slice(0, 7)), []);
+  const hoje = hojeISO();
+  const meses = useMemo(() => mesesDoAno(hoje.slice(0, 7)), [hoje]);
   const contaMes = useCallback((ym) => pedidos.filter((p) => mesDe(p) === ym).length, [pedidos]);
 
   /** Os clientes que existem de fato na pauta — a campanha dos cards. */
@@ -148,17 +150,22 @@ export default function Pauta() {
       doMes.filter((p) => {
         const dem = cfg.demandantes.find((d) => d.id === p.demandante_id)?.nome || "";
         const tipo = cfg.tipos.find((t) => t.id === p.tipo_id)?.nome || "";
-        const st = cfg.status.find((s) => s.id === p.status_interno_id)?.nome || "";
+        const stObj = cfg.status.find((s) => s.id === p.status_interno_id);
+        const st = stObj?.nome || "";
         return (
           (!filtros.cli || (p.campanha || "") === filtros.cli) &&
           (!filtros.dem || dem === filtros.dem) &&
           (!filtros.tipo || tipo === filtros.tipo) &&
           (!filtros.status || st === filtros.status) &&
           (!filtros.rec || nomeRec(p) === filtros.rec) &&
+          // Ativos: some o que já saiu. Linha sem status nenhum continua, porque
+          // "sem status" é justamente o que ainda não andou.
+          (!filtros.ativos || !ehEnviado(stObj)) &&
+          (!filtros.hoje || diaDeEntrega(p) === hoje) &&
           (!filtros.q || (p.titulo || "").toLowerCase().includes(filtros.q))
         );
       }),
-    [doMes, filtros, cfg, nomeRec]
+    [doMes, filtros, cfg, nomeRec, hoje]
   );
 
   /**
@@ -309,7 +316,25 @@ export default function Pauta() {
                   </select>
                   <input className="search" type="search" placeholder="Buscar pedido…"
                     value={filtros.q} onChange={(e) => setFiltros({ ...filtros, q: e.target.value.toLowerCase().trim() })} />
-                  <button className="chipclear" onClick={() => setFiltros({ cli: "", dem: "", tipo: "", status: "", rec: "", q: "" })}>limpar</button>
+
+                  {/* Dois recortes que se usa o dia inteiro, e por isso viram
+                      caixa de marcar e não mais uma caixa de seleção: ligar e
+                      desligar tem de ser um clique, não dois. */}
+                  <label className={`fcheck ${filtros.ativos ? "on" : ""}`}
+                    title="Esconde o que já saiu — some tudo que está com o status interno ENVIADO">
+                    <input type="checkbox" checked={filtros.ativos}
+                      onChange={(e) => setFiltros({ ...filtros, ativos: e.target.checked })} />
+                    👁 ativos
+                  </label>
+
+                  <label className={`fcheck ${filtros.hoje ? "on" : ""}`}
+                    title="Só o que entrega hoje. Vale a hora combinada quando existe; sem ela, a data de entrega do card.">
+                    <input type="checkbox" checked={filtros.hoje}
+                      onChange={(e) => setFiltros({ ...filtros, hoje: e.target.checked })} />
+                    👁 hoje
+                  </label>
+
+                  <button className="chipclear" onClick={() => setFiltros(FILTRO_VAZIO)}>limpar</button>
                 </>
               ) : (
                 <button className="chipclear" onClick={() => setArea("pauta")}>← voltar à pauta</button>

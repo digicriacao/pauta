@@ -15,6 +15,12 @@ export function diffDias(a, b) {
   return Math.round((d(b) - d(a)) / 86400000);
 }
 
+/** O dia em que a coisa é entregue. A hora combinada manda quando existe,
+ *  porque é ela que a equipe de fato acertou; sem ela, vale a data do card.
+ *  É a mesma conta que a página do cliente faz. */
+export const diaDeEntrega = (p) =>
+  p?.entrega_em ? paraInputLocal(p.entrega_em).slice(0, 10) : (p?.data_entrega || null);
+
 /** Em que aba o pedido cai. Quem manda é a ENTREGA do card: pedido que entrega
  *  em setembro aparece em setembro, mesmo tendo sido pedido em agosto. A
  *  solicitação só entra como desempate quando o card ainda não tem entrega. */

@@ -836,3 +836,14 @@ body{zoom:var(--zoom,1);
 .az-selo{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--faint);white-space:nowrap}
 .az-selo.indo{color:var(--muted)}
 .az-selo.erro{color:var(--alerta);font-weight:600}
+
+/* Caixas de marcar da barra de filtros. Mesma altura e mesma borda das caixas
+   de seleção ao lado, para a linha continuar sendo uma linha; ligada, ganha a
+   cor da casa — o estado tem de ser legível de longe, já que estas duas
+   escondem linhas da grade. */
+.fcheck{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;
+  border:1px solid var(--line-strong);background:var(--surface);border-radius:8px;
+  cursor:pointer;font-size:13px;color:var(--ink-2);white-space:nowrap;user-select:none}
+.fcheck:hover{border-color:var(--accent);color:var(--accent-ink)}
+.fcheck input{width:13px;height:13px;margin:0;accent-color:var(--accent);cursor:pointer}
+.fcheck.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink);font-weight:560}
