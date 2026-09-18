@@ -35,7 +35,7 @@ export default function Pauta() {
   const [vista, setVista] = useState("pauta");
   // Dentro da pauta ainda há três áreas: a grade, as réguas e os cancelados.
   const [area, setArea] = useState("pauta");
-  const FILTRO_VAZIO = { cli: "", dem: "", tipo: "", status: "", rec: "", q: "", ativos: false, periodo: PERIODO_VAZIO };
+  const FILTRO_VAZIO = { cli: "", dem: "", tipo: "", status: "", rec: "", q: "", ativos: false, semCard: false, periodo: PERIODO_VAZIO };
   const [filtros, setFiltros] = useState(FILTRO_VAZIO);
   const [ordem, setOrdem] = useState(ORDEM_PADRAO);
   const [foco, setFoco] = useState(null);
@@ -162,9 +162,20 @@ export default function Pauta() {
   const doMes = useMemo(() => ordenados.filter((p) => mesDe(p) === mesSel), [ordenados, mesSel]);
 
   /* Com filtro de data ligado, quem manda é a data: a base passa a ser a pauta
-     inteira. Sem ele, o mês continua mandando, como sempre foi. */
+     inteira. Sem ele, o mês continua mandando, como sempre foi.
+
+     "Sem card" faz o mesmo, e pelo mesmo motivo de Parados e Cancelados: um
+     pedido que entrou sem card em junho continua sem card hoje. Se a aba do mês
+     mandasse, a bolinha diria 7 e a lista mostraria 2 — e a conta que não fecha
+     é pior do que não ter a bolinha. */
   const comPeriodo = periodoAtivo(filtros.periodo, hoje);
-  const base = comPeriodo ? ordenados : doMes;
+  const base = comPeriodo || filtros.semCard ? ordenados : doMes;
+
+  /** Linha sem card é dívida, não recorte de mês: conta a pauta inteira. */
+  const semCardTotal = useMemo(
+    () => pedidos.filter((p) => !p.azure_id).length,
+    [pedidos]
+  );
 
   const visiveis = useMemo(
     () =>
@@ -182,6 +193,8 @@ export default function Pauta() {
           // Ativos: some o que já saiu. Linha sem status nenhum continua, porque
           // "sem status" é justamente o que ainda não andou.
           (!filtros.ativos || !ehEnviado(stObj)) &&
+          // Sem card: só as linhas que ainda não têm card no Azure.
+          (!filtros.semCard || !p.azure_id) &&
           noPeriodo(p, filtros.periodo, hoje) &&
           (!filtros.q || (p.titulo || "").toLowerCase().includes(filtros.q))
         );
@@ -327,15 +340,15 @@ export default function Pauta() {
                     <option value="">Tipo</option>
                     {cfg.tipos.map((t) => <option key={t.id}>{t.nome}</option>)}
                   </select>
-                  <select className="f" value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}>
-                    <option value="">Status interno</option>
+                  <select className="f curto" value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}>
+                    <option value="">Status</option>
                     {cfg.status.map((s) => <option key={s.id}>{s.nome}</option>)}
                   </select>
                   <select className="f" value={filtros.rec} onChange={(e) => setFiltros({ ...filtros, rec: e.target.value })}>
                     <option value="">Recurso</option>
                     {[...new Set(pedidos.map(nomeRec).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt")).map((r) => <option key={r}>{r}</option>)}
                   </select>
-                  <input className="search" type="search" placeholder="Buscar pedido…"
+                  <input className="search" type="search" placeholder="Buscar…"
                     value={filtros.q} onChange={(e) => setFiltros({ ...filtros, q: e.target.value.toLowerCase().trim() })} />
 
                   {/* Dois recortes que se usa o dia inteiro, e por isso viram
@@ -354,6 +367,21 @@ export default function Pauta() {
                   />
 
                   <button className="chipclear" onClick={() => setFiltros(FILTRO_VAZIO)}>limpar</button>
+
+                  {/* Fica entre "limpar" e "Réguas" de propósito: é um filtro,
+                      como os da esquerda, mas conta uma dívida, como os botões
+                      de área da direita. O respiro dos dois lados (.aparte) diz
+                      isso sem precisar de rótulo. */}
+                  <label className={`fcheck aparte ${filtros.semCard ? "on" : ""}`}
+                    title="Mostra só as linhas que entraram sem card no Azure — em todos os meses">
+                    <input type="checkbox" checked={filtros.semCard}
+                      onChange={(e) => setFiltros({ ...filtros, semCard: e.target.checked })} />
+                    ❌ card
+                    <span className={`bolha vm ${semCardTotal ? "" : "zero"}`}
+                      title={`${semCardTotal} ${semCardTotal === 1 ? "linha" : "linhas"} sem card na pauta`}>
+                      {semCardTotal}
+                    </span>
+                  </label>
                 </>
               ) : (
                 <button className="chipclear" onClick={() => setArea("pauta")}>← voltar à pauta</button>
@@ -387,7 +415,10 @@ export default function Pauta() {
                 );
               })}
 
-              <span className="spacer" />
+              {/* Lado direito num bloco só, empurrado por margin-left:auto.
+                  O espaçador vazio de antes custava dois vãos da barra, e a
+                  barra vive a 10px de quebrar em duas linhas. */}
+              <span className="tdir">
               {/* Com período ligado a lista deixa de ser "o mês": dizer isso em
                   voz alta evita a pergunta "cadê o resto de setembro?". */}
               {comPeriodo && area === "pauta" && (
@@ -402,6 +433,8 @@ export default function Pauta() {
                   ? `${reguas.length} ${reguas.length === 1 ? "régua" : "réguas"}`
                   : filas[area]
                   ? `${filas[area].itens.length} ${filas[area].itens.length === 1 ? filas[area].fila.singular : filas[area].fila.plural}`
+                  : filtros.semCard
+                  ? `${visiveis.length} sem card`
                   : comPeriodo
                   // Com período ligado o total do mês não é referência de nada:
                   // a lista veio da pauta inteira. "de 18" só confundiria.
@@ -409,6 +442,7 @@ export default function Pauta() {
                   : visiveis.length === doMes.length
                   ? `${doMes.length} pedidos`
                   : `${visiveis.length} de ${doMes.length}`}
+              </span>
               </span>
             </div>
 
