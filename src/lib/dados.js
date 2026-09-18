@@ -20,6 +20,12 @@ export function useDados() {
   const [azure, setAzure] = useState({ estado: "parado", em: null, erro: null });
   const montado = useRef(true);
   const ocupado = useRef(false);
+  /* Quem não tem permissão de disparar o refresco — leitor, por exemplo —
+     recebia 401 e ficava com o aviso vermelho de erro aceso para sempre, sem
+     que houvesse nada errado: para o leitor quem mantém a pauta em dia é o
+     agendador do banco. Na primeira recusa a tela para de tentar e volta a
+     ficar calada. */
+  const semPermissao = useRef(false);
 
   const carregar = useCallback(async () => {
     const sb = supabase();
@@ -74,6 +80,7 @@ export function useDados() {
     if (!sb) return {};
     // Duas chamadas ao mesmo tempo não adiantam nada e só dobram o tráfego.
     if (ocupado.current) return {};
+    if (semPermissao.current) return {};
     const { data } = await sb.auth.getSession();
     const token = data?.session?.access_token;
     if (!token) return {};
@@ -82,8 +89,13 @@ export function useDados() {
     if (montado.current) setAzure((a) => ({ ...a, estado: "indo" }));
     try {
       const corpo = { acao: "atualizar", ...(ids?.length ? { ids } : {}) };
-      const { ok, dados: r } = await chamaFuncao("sync", corpo, token);
+      const { ok, status, dados: r } = await chamaFuncao("sync", corpo, token);
       if (!montado.current) return {};
+      if (status === 401 || status === 403) {
+        semPermissao.current = true;
+        setAzure({ estado: "parado", em: null, erro: null });
+        return {};
+      }
       if (!ok) {
         setAzure({ estado: "erro", em: new Date(), erro: r?.erro || "sem resposta" });
         return { erro: r?.erro || "sem resposta" };
