@@ -54,7 +54,7 @@ function Chip({ valor, opcoes, aoMudar, desabilitado }) {
   );
 }
 
-function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
+function Linha({ p, cfg, colunas, podeEditar, salvar, remover, marcar, aoVincular }) {
   const dis = !podeEditar;
   const estado = MAPA_ESTADO[p.azure_state] || (p.azure_state ? p.azure_state.toUpperCase() : "");
   const recurso = nomeCurto(cfg.recursos, p.azure_assigned_to);
@@ -63,25 +63,35 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
   // O status interno pode marcar a linha como parada ou cancelada — as duas
   // saem do fluxo normal e ganham tratamento visual próprio.
   const st = cfg.status.find((s) => s.id === p.status_interno_id);
-  // Fura-fila passa na frente de tudo, inclusive do vermelho de parado e
+  // Fura-fila passa na frente de tudo, inclusive do cinza de parado e
   // cancelado: é o único destaque que pede ação agora, não atenção depois.
   const fura = /fura/i.test(cfg.tipos.find((t) => t.id === p.tipo_id)?.nome || "");
   const excecao = fura ? "fura" : st?.cancelamento ? "cancelada" : st?.pausa ? "parada" : "";
 
-  return (
-    <tr className={`${p.entregue ? "feito" : ""} ${rascunho ? "rascunho" : ""} ${excecao}`}>
-      <td>
+  /* As células ficam num mapa por id, e a ORDEM de saída vem de `colunas`.
+     Antes eram dezessete <td> soltos em sequência; com o filtro de colunas isso
+     não serve mais, porque esconder a quinta coluna exige não desenhar a quinta
+     célula — e não dá para contar posição num JSX escrito à mão. O mapa também
+     garante que célula e cabeçalho nunca saiam de sincronia: os dois passam a
+     ler a mesma lista. */
+  const celulas = {
+    data_solicitacao: (
+      <td key="data_solicitacao">
         <CampoData valor={p.data_solicitacao} desabilitado={dis}
           aoMudar={(v) => salvar(p.id, { data_solicitacao: v || null })} />
       </td>
-      <td>
+    ),
+    azure_id: (
+      <td key="azure_id">
         {rascunho
           ? <ColarCard alerta desabilitado={dis} aoColar={(id) => aoVincular(p, id)} />
           : <span className="link">
               <a href={urlCard(p.azure_id)} target="_blank" rel="noopener noreferrer">#{p.azure_id} ↗</a>
             </span>}
       </td>
-      <td>
+    ),
+    pasta_codigo: (
+      <td key="pasta_codigo">
         {p.pasta_codigo ? (
           <span className="link">
             <a className="pasta" href={p.pasta_url || "#"} target="_blank" rel="noopener noreferrer"
@@ -93,7 +103,9 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
           <div className="ro empty">—</div>
         )}
       </td>
-      <td>
+    ),
+    campanha: (
+      <td key="campanha">
         {/* Cliente = campo Campanha do card. Só a linha sem card aceita digitar. */}
         {rascunho ? (
           <CampoTexto valor={p.campanha} desabilitado={dis} placeholder="cliente"
@@ -105,14 +117,18 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
           <div className="ro empty">sem campanha</div>
         )}
       </td>
-      <td>
+    ),
+    demandante_id: (
+      <td key="demandante_id">
         <select className="cell" value={p.demandante_id ?? ""} disabled={dis}
           onChange={(e) => salvar(p.id, { demandante_id: e.target.value ? Number(e.target.value) : null })}>
           <option value=""></option>
           {cfg.demandantes.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
         </select>
       </td>
-      <td className="pedido">
+    ),
+    titulo: (
+      <td key="titulo" className="pedido">
         {rascunho ? (
           <span className="rasc">
             <CampoTexto classe="titulo" valor={p.titulo} desabilitado={dis}
@@ -128,7 +144,9 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
           <div className="ro" title={p.titulo || ""}>{p.titulo || <em>sem título</em>}</div>
         )}
       </td>
-      <td>
+    ),
+    qtd_artes: (
+      <td key="qtd_artes">
         <input className="qtd" type="number" min="0" step="1" inputMode="numeric" disabled={dis}
           defaultValue={p.qtd_artes ?? 0}
           title="Quantidade de artes deste pedido"
@@ -138,58 +156,84 @@ function Linha({ p, cfg, podeEditar, salvar, remover, marcar, aoVincular }) {
             if (n !== (p.qtd_artes ?? 0)) salvar(p.id, { qtd_artes: n });
           }} />
       </td>
-      <td>
+    ),
+    esforco: (
+      <td key="esforco">
         {p.esforco === null || p.esforco === undefined
           ? <div className="ro empty">—</div>
           : <div className="ro mono" title="Esforço registrado no card">{p.esforco}</div>}
       </td>
-      <td>
+    ),
+    tipo_id: (
+      <td key="tipo_id">
         <Chip valor={p.tipo_id} opcoes={cfg.tipos} desabilitado={dis}
           aoMudar={(v) => salvar(p.id, { tipo_id: v })} />
       </td>
-      <td>
+    ),
+    data_entrega: (
+      <td key="data_entrega">
         {p.data_entrega
           ? <div className="ro mono">{fmtBR(p.data_entrega)}</div>
           : <div className="ro empty">vem do card</div>}
       </td>
-      <td>
+    ),
+    azure_state: (
+      <td key="azure_state">
         {estado
           ? <span className="azchip"><i style={{ background: corEstado(estado) }} />{estado}</span>
           : <div className="ro empty">—</div>}
       </td>
-      <td>
+    ),
+    status_interno_id: (
+      <td key="status_interno_id">
         <Chip valor={p.status_interno_id} opcoes={cfg.status} desabilitado={dis}
           aoMudar={(v) => {
             const st = cfg.status.find((s) => s.id === v);
             salvar(p.id, { status_interno_id: v, entregue: !!st?.entrega });
           }} />
       </td>
-      <td>
+    ),
+    entrega_em: (
+      <td key="entrega_em">
         <CampoData hora valor={p.entrega_em} desabilitado={dis}
           aoMudar={(v) => salvar(p.id, { entrega_em: deInputLocal(v) })} />
       </td>
-      <td>
+    ),
+    entregue: (
+      <td key="entregue">
         <button className={`chk ${p.entregue ? "on" : ""}`} disabled={dis}
           title={p.entregue ? "Entregue — clique para reabrir" : "Marcar como entregue"}
           onClick={() => marcar(p)}>✓</button>
       </td>
-      <td>
+    ),
+    recurso: (
+      <td key="recurso">
         {p.azure_assigned_to
           ? <div className="ro" title={`Azure: ${p.azure_assigned_to}`}>{recurso}</div>
           : <div className="ro empty">—</div>}
       </td>
-      <td>
+    ),
+    observacao: (
+      <td key="observacao">
         <CampoTexto valor={p.observacao} desabilitado={dis} placeholder="…"
           aoSalvar={(v) => salvar(p.id, { observacao: v })} />
       </td>
-      <td>
+    ),
+    acoes: (
+      <td key="acoes">
         <button className="del" disabled={dis} title="Remover linha" onClick={() => remover(p)}>×</button>
       </td>
+    ),
+  };
+
+  return (
+    <tr className={`${p.entregue ? "feito" : ""} ${rascunho ? "rascunho" : ""} ${excecao}`}>
+      {colunas.map((c) => celulas[c.id])}
     </tr>
   );
 }
 
-export default function Grade({ pedidos, cfg, clientes = [], podeEditar, salvar, remover, aoColar, aoIniciar, aoVincular, aviso, ordem, aoOrdenar }) {
+export default function Grade({ pedidos, cfg, clientes = [], colunas = COLUNAS, podeEditar, salvar, remover, aoColar, aoIniciar, aoVincular, aviso, ordem, aoOrdenar }) {
   const { larg, pegaBorda } = useLarguras(LS_LARGURAS);
   const [nomeNovo, setNomeNovo] = useState("");
 
@@ -203,7 +247,7 @@ export default function Grade({ pedidos, cfg, clientes = [], podeEditar, salvar,
     });
   }
 
-  const total = COLUNAS.reduce((s, c) => s + larg(c), 0);
+  const total = colunas.reduce((s, c) => s + larg(c), 0);
 
   return (
     <div className="gridwrap">
@@ -211,37 +255,45 @@ export default function Grade({ pedidos, cfg, clientes = [], podeEditar, salvar,
         {clientes.map((c) => <option key={c} value={c} />)}
       </datalist>
       <table className="grade" style={{ minWidth: total, width: "100%" }}>
-        <Colunas colunas={COLUNAS} larg={larg} />
-        <Cabecalhos colunas={COLUNAS} larg={larg} pegaBorda={pegaBorda} ordem={ordem} aoOrdenar={aoOrdenar} />
+        <Colunas colunas={colunas} larg={larg} />
+        <Cabecalhos colunas={colunas} larg={larg} pegaBorda={pegaBorda} ordem={ordem} aoOrdenar={aoOrdenar} />
         <tbody>
           {/* linha nova, sempre no topo: é onde se cola o link do card */}
           <tr className="novo">
-            <td><span className="ro mono">{fmtBR(hojeISO())}</span></td>
-            <td><ColarCard desabilitado={!podeEditar} aoColar={aoColar} /></td>
-            {COLUNAS.slice(2).map((c) =>
-              c.id === "titulo" ? (
-                <td key={c.id}>
-                  <input
-                    className="novo-pedido" placeholder="Iniciar pedido" disabled={!podeEditar}
-                    value={nomeNovo}
-                    onChange={(e) => setNomeNovo(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Enter") return;
-                      const v = nomeNovo.trim();
-                      if (!v) return;
-                      setNomeNovo("");
-                      aoIniciar(v);
-                    }}
-                    title="Escreva o nome do pedido e aperte Enter. A linha entra sem card, marcada em vermelho."
-                  />
-                </td>
-              ) : (
-                <td key={c.id} />
-              )
-            )}
+            {/* Mesma lógica das células da Linha: o que existe aqui é a data de
+                hoje, o campo de colar e o de iniciar pedido; o resto é célula
+                vazia, e todos saem na ordem de `colunas`. */}
+            {colunas.map((c) => {
+              if (c.id === "data_solicitacao") {
+                return <td key={c.id}><span className="ro mono">{fmtBR(hojeISO())}</span></td>;
+              }
+              if (c.id === "azure_id") {
+                return <td key={c.id}><ColarCard desabilitado={!podeEditar} aoColar={aoColar} /></td>;
+              }
+              if (c.id === "titulo") {
+                return (
+                  <td key={c.id}>
+                    <input
+                      className="novo-pedido" placeholder="Iniciar pedido" disabled={!podeEditar}
+                      value={nomeNovo}
+                      onChange={(e) => setNomeNovo(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        const v = nomeNovo.trim();
+                        if (!v) return;
+                        setNomeNovo("");
+                        aoIniciar(v);
+                      }}
+                      title="Escreva o nome do pedido e aperte Enter. A linha entra sem card, marcada em vermelho."
+                    />
+                  </td>
+                );
+              }
+              return <td key={c.id} />;
+            })}
           </tr>
           {pedidos.map((p) => (
-            <Linha key={p.id} p={p} cfg={cfg} podeEditar={podeEditar}
+            <Linha key={p.id} p={p} cfg={cfg} colunas={colunas} podeEditar={podeEditar}
               salvar={async (id, campos) => {
                 const r = await salvar(id, campos);
                 if (r?.erro) aviso(`Não deu para salvar: ${r.erro}`);

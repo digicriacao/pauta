@@ -4,24 +4,32 @@
  *  ord   — chave de ordenação; sem isso, o cabeçalho não é clicável.
  *  dirPadrao — como a coluna ordena na primeira vez que é clicada.
  */
+/* `nome` é o rótulo por extenso, para o filtro de colunas: metade dos cabeçalhos
+   da grade é emoji ou abreviação, e "📁" numa lista de caixas de marcar não diz
+   nada. `fixa` marca a coluna que não se esconde. */
 export const COLUNAS = [
-  { id: "data_solicitacao",  rotulo: "📅 Solicitação", largura: 142, dono: "azure+app", ord: "data_solicitacao",  dirPadrao: "desc" },
-  { id: "azure_id",          rotulo: "Link Azure",     largura: 130, dono: "app"   },
-  { id: "pasta_codigo",      rotulo: "📁",             largura: 96,  dono: "azure" },
-  { id: "campanha",          rotulo: "Cliente",        largura: 138, dono: "azure", ord: "campanha",           dirPadrao: "asc", dica: "Vem do campo Campanha do card" },
-  { id: "demandante_id",     rotulo: "Demandante",     largura: 134, dono: "app",   ord: "demandante",         dirPadrao: "asc"  },
-  { id: "titulo",            rotulo: "Pedido",         largura: 304, dono: "azure" },
-  { id: "qtd_artes",         rotulo: "🎨",             largura: 74,  dono: "app",   ord: "qtd_artes",          dirPadrao: "desc", dica: "Quantidade de artes" },
-  { id: "esforco",           rotulo: "⚡️",             largura: 74,  dono: "azure", ord: "esforco",            dirPadrao: "desc", dica: "Esforço — vem do campo Effort do card" },
-  { id: "tipo_id",           rotulo: "Tipo",           largura: 126, dono: "app",   ord: "tipo",               dirPadrao: "asc"  },
-  { id: "data_entrega",      rotulo: "📅 Entrega",     largura: 118, dono: "azure", ord: "data_entrega",       dirPadrao: "asc"  },
-  { id: "azure_state",       rotulo: "🔵 Azure",       largura: 176, dono: "azure", ord: "azure_state",        dirPadrao: "asc"  },
-  { id: "status_interno_id", rotulo: "🟠 Interno",     largura: 208, dono: "app",   ord: "status_interno",     dirPadrao: "asc"  },
-  { id: "entrega_em",        rotulo: "🕐 Entrega",     largura: 178, dono: "app",   ord: "entrega_em",         dirPadrao: "asc"  },
-  { id: "entregue",          rotulo: "✓ Check",        largura: 78,  dono: "app"   },
-  { id: "recurso",           rotulo: "Recurso",        largura: 118, dono: "azure", ord: "recurso",            dirPadrao: "asc"  },
-  { id: "observacao",        rotulo: "📝 Obs",         largura: 190, dono: "app"   },
-  { id: "acoes",             rotulo: "",               largura: 36,  dono: "app"   },
+  { id: "data_solicitacao",  rotulo: "📅 Solicitação", nome: "Data da solicitação", largura: 142, dono: "azure+app", ord: "data_solicitacao",  dirPadrao: "desc" },
+  { id: "azure_id",          rotulo: "Link Azure",     nome: "Link do card",        largura: 130, dono: "app"   },
+  { id: "pasta_codigo",      rotulo: "📁",             nome: "Pasta",               largura: 96,  dono: "azure" },
+  { id: "campanha",          rotulo: "Cliente",        nome: "Cliente",             largura: 138, dono: "azure", ord: "campanha",           dirPadrao: "asc", dica: "Vem do campo Campanha do card" },
+  { id: "demandante_id",     rotulo: "Demandante",     nome: "Demandante",          largura: 134, dono: "app",   ord: "demandante",         dirPadrao: "asc"  },
+  { id: "titulo",            rotulo: "Pedido",         nome: "Pedido",              largura: 304, dono: "azure", fixa: true },
+  { id: "qtd_artes",         rotulo: "🎨",             nome: "Artes",               largura: 74,  dono: "app",   ord: "qtd_artes",          dirPadrao: "desc", dica: "Quantidade de artes" },
+  { id: "esforco",           rotulo: "⚡️",             nome: "Esforço",             largura: 74,  dono: "azure", ord: "esforco",            dirPadrao: "desc", dica: "Esforço — vem do campo Effort do card" },
+  { id: "tipo_id",           rotulo: "Tipo",           nome: "Tipo",                largura: 126, dono: "app",   ord: "tipo",               dirPadrao: "asc"  },
+  { id: "data_entrega",      rotulo: "📅 Entrega",     nome: "Data de entrega",     largura: 118, dono: "azure", ord: "data_entrega",       dirPadrao: "asc"  },
+  { id: "azure_state",       rotulo: "🔵 Azure",       nome: "Estado no Azure",     largura: 176, dono: "azure", ord: "azure_state",        dirPadrao: "asc"  },
+  { id: "status_interno_id", rotulo: "🟠 Interno",     nome: "Status interno",      largura: 208, dono: "app",   ord: "status_interno",     dirPadrao: "asc"  },
+  { id: "entrega_em",        rotulo: "🕐 Entrega",     nome: "Hora combinada",      largura: 178, dono: "app",   ord: "entrega_em",         dirPadrao: "asc"  },
+  { id: "entregue",          rotulo: "✓ Check",        nome: "Check de entrega",    largura: 78,  dono: "app"   },
+  { id: "recurso",           rotulo: "Recurso",        nome: "Recurso",             largura: 118, dono: "azure", ord: "recurso",            dirPadrao: "asc"  },
+  { id: "observacao",        rotulo: "📝 Obs",         nome: "Observação",          largura: 190, dono: "app"   },
+  { id: "acoes",             rotulo: "",               nome: "Remover linha",       largura: 36,  dono: "app"   },
+];
+
+/** O recorte mínimo do botão "só o essencial" no filtro de colunas. */
+export const COLUNAS_ESSENCIAIS = [
+  "campanha", "titulo", "data_entrega", "status_interno_id", "recurso", "acoes",
 ];
 
 export const ORDEM_PADRAO = { campo: "data_solicitacao", dir: "desc" };
@@ -245,6 +253,7 @@ export const ZOOM_PADRAO = 100;
 
 export const LS_BLOCOS = "pauta.v2.blocos";
 export const LS_LARGURAS = "pauta.v2.larguras";
+export const LS_COLUNAS = "pauta.v2.colunas";
 export const LS_ORDEM = "pauta.v2.ordem";
 export const LS_ZOOM = "pauta.v2.zoom";
 

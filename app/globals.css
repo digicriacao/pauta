@@ -917,3 +917,43 @@ body{zoom:var(--zoom,1);
 /* Aviso de que a lista deixou de ser "o mês selecionado". */
 .per-selo{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
   color:var(--accent-ink);background:var(--accent-soft);border-radius:20px;padding:3px 9px;white-space:nowrap}
+
+
+/* ── filtro de colunas: onde ficava o contador de pedidos ─────────────────────
+   O menu abre pela DIREITA (`right:0`), ao contrário do de data: este controle
+   vive no fim da barra, então abrir para a esquerda é o único jeito de ele
+   nascer dentro da tela — e assim não precisa da medição de recuo que o de
+   data faz. */
+.fcol{position:relative;flex:none}
+.fcol-pop{position:absolute;top:calc(100% + 6px);right:0;z-index:45;width:250px;
+  background:var(--surface);border:1px solid var(--line-strong);border-radius:11px;
+  box-shadow:0 18px 44px -16px rgba(0,0,0,.5);padding:8px}
+.fcol-tit{margin:2px 4px 7px;font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted)}
+
+/* A lista rola: são dezessete colunas e o menu não pode passar da tela. */
+.fcol-lista{display:flex;flex-direction:column;gap:1px;max-height:296px;overflow-y:auto}
+
+.fcol-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;
+  cursor:pointer;font-size:12.5px;color:var(--ink-2);user-select:none}
+.fcol-item:hover{background:var(--surface-3);color:var(--ink)}
+.fcol-item input{width:13px;height:13px;margin:0;accent-color:var(--accent);cursor:pointer;flex:none}
+.fcol-item.on{color:var(--ink)}
+/* Desmarcada continua legível: uma lista com metade dos itens ilegível é pior
+   que uma lista sem destaque nenhum. Só recua um passo de tinta. */
+.fcol-item:not(.on) .fcol-nome{color:var(--muted)}
+/* Travada NÃO fica apagada: caixa marcada e desabilitada, apagada por cima,
+   lia-se como "desmarcada" — exatamente o contrário do que ela diz. Fica com a
+   tinta normal e ganha a etiqueta "sempre", que não deixa dúvida. */
+.fcol-item.travada{cursor:default}
+.fcol-item.travada:hover{background:transparent}
+.fcol-item.travada input{opacity:.55}
+.fcol-fixa{flex:none;font-family:var(--mono);font-size:8px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted)}
+.fcol-nome{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* De quem é a coluna, na mesma linguagem do resto: mono, caixa alta, apagado. */
+.fcol-dono{flex:none;font-family:var(--mono);font-size:8px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--info);opacity:.75}
+
+.fcol-pe{display:flex;gap:12px;align-items:center;justify-content:space-between;
+  margin-top:7px;padding:7px 6px 2px;border-top:1px solid var(--line)}

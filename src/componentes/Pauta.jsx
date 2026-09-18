@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
 import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
 import { PERIODO_VAZIO, periodoAtivo, noPeriodo, detalhePeriodo, cruzaMes, mesDoPeriodo } from "@/lib/periodo";
-import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado, FILAS, ehEnviado } from "@/lib/constantes";
+import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado, FILAS, ehEnviado, COLUNAS, LS_COLUNAS } from "@/lib/constantes";
 import Cabecalho from "./Cabecalho";
 import Resumo from "./Resumo";
 import Grade from "./Grade";
@@ -22,6 +22,7 @@ import Medidor from "./Medidor";
 import Confronto from "./Confronto";
 import Ajuda from "./Ajuda";
 import FiltroData from "./FiltroData";
+import FiltroColunas from "./FiltroColunas";
 
 export default function Pauta() {
   const { cfg, pedidos, carregando, erro, recarregar, salvarCampo, criarPedido, removerPedido, azure } = useDados();
@@ -38,6 +39,11 @@ export default function Pauta() {
   const FILTRO_VAZIO = { cli: "", dem: "", tipo: "", status: "", rec: "", q: "", ativos: false, semCard: false, periodo: PERIODO_VAZIO };
   const [filtros, setFiltros] = useState(FILTRO_VAZIO);
   const [ordem, setOrdem] = useState(ORDEM_PADRAO);
+  /* Quais colunas da grade aparecem. Começa com todas e é lembrado por pessoa,
+     como a largura das colunas — a escolha é de quem está olhando a tela, não
+     do time. */
+  const [colunasVis, setColunasVis] = useState(() => COLUNAS.map((c) => c.id));
+  const [menuColunas, setMenuColunas] = useState(false);
   const [foco, setFoco] = useState(null);
   const [salvandoFoco, setSalvandoFoco] = useState(false);
   const [mostraLogin, setMostraLogin] = useState(false);
@@ -68,6 +74,34 @@ export default function Pauta() {
       if (salvo?.campo) setOrdem(salvo);
     } catch {}
   }, []);
+
+  /* Colunas escolhidas. Guarda a lista de ids e cruza com COLUNAS na leitura:
+     assim coluna nova entra visível sozinha (id que não está no que foi salvo
+     conta como "ainda não escondida") e coluna removida do código não deixa
+     lixo na escolha de ninguém. */
+  useEffect(() => {
+    try {
+      const salvo = JSON.parse(localStorage.getItem(LS_COLUNAS) || "null");
+      if (!Array.isArray(salvo)) return;
+      const escondidas = new Set(
+        COLUNAS.filter((c) => !c.fixa && !salvo.includes(c.id)).map((c) => c.id)
+      );
+      const vis = COLUNAS.filter((c) => !escondidas.has(c.id)).map((c) => c.id);
+      if (vis.length) setColunasVis(vis);
+    } catch {}
+  }, []);
+
+  const trocarColunas = useCallback((ids) => {
+    // Sai na ordem de COLUNAS, nunca na ordem em que a pessoa clicou.
+    const vis = COLUNAS.filter((c) => c.fixa || ids.includes(c.id)).map((c) => c.id);
+    setColunasVis(vis);
+    try { localStorage.setItem(LS_COLUNAS, JSON.stringify(vis)); } catch {}
+  }, []);
+
+  const colunasDaGrade = useMemo(
+    () => COLUNAS.filter((c) => colunasVis.includes(c.id)),
+    [colunasVis]
+  );
 
   const aoOrdenar = useCallback((coluna) => {
     setOrdem((atual) => {
@@ -419,36 +453,28 @@ export default function Pauta() {
                   O espaçador vazio de antes custava dois vãos da barra, e a
                   barra vive a 10px de quebrar em duas linhas. */}
               <span className="tdir">
-              {/* Com período ligado a lista deixa de ser "o mês": dizer isso em
-                  voz alta evita a pergunta "cadê o resto de setembro?". */}
-              {comPeriodo && area === "pauta" && (
-                <span className="per-selo" title={detalhePeriodo(filtros.periodo, hoje)}>
-                  📅 por data{cruzaMes(filtros.periodo, hoje) ? " · atravessa dois meses" : ""}
-                </span>
-              )}
-              <span className="mono" style={{ color: "var(--muted)", fontSize: 12 }}>
-                {carregando
-                  ? "carregando…"
-                  : area === "reguas"
-                  ? `${reguas.length} ${reguas.length === 1 ? "régua" : "réguas"}`
-                  : filas[area]
-                  ? `${filas[area].itens.length} ${filas[area].itens.length === 1 ? filas[area].fila.singular : filas[area].fila.plural}`
-                  : filtros.semCard
-                  ? `${visiveis.length} sem card`
-                  : comPeriodo
-                  // Com período ligado o total do mês não é referência de nada:
-                  // a lista veio da pauta inteira. "de 18" só confundiria.
-                  ? `${visiveis.length} no período`
-                  : visiveis.length === doMes.length
-                  ? `${doMes.length} pedidos`
-                  : `${visiveis.length} de ${doMes.length}`}
-              </span>
+                {/* Com período ligado a lista deixa de ser "o mês": dizer isso
+                    em voz alta evita a pergunta "cadê o resto de setembro?". */}
+                {comPeriodo && area === "pauta" && (
+                  <span className="per-selo" title={detalhePeriodo(filtros.periodo, hoje)}>
+                    📅 por data{cruzaMes(filtros.periodo, hoje) ? " · atravessa dois meses" : ""}
+                  </span>
+                )}
+                {/* Onde ficava "N pedidos". O contador saiu a pedido: numa
+                    barra que disputa cada pixel, um número que ninguém usa
+                    para decidir nada vale menos que um controle. */}
+                {area === "pauta" && (
+                  <FiltroColunas
+                    visiveis={colunasVis} aoMudar={trocarColunas}
+                    aberto={menuColunas} setAberto={setMenuColunas}
+                  />
+                )}
               </span>
             </div>
 
             {area === "pauta" && (
               <Grade
-                pedidos={visiveis} cfg={cfg} clientes={clientes} podeEditar={podeEditar}
+                pedidos={visiveis} cfg={cfg} clientes={clientes} colunas={colunasDaGrade} podeEditar={podeEditar}
                 salvar={salvarCampo} remover={removerPedido} aviso={aviso}
                 aoColar={aoColar} aoIniciar={iniciarPedido} aoVincular={vincularCard}
                 ordem={ordem} aoOrdenar={aoOrdenar}
