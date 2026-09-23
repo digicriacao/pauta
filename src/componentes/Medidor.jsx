@@ -25,26 +25,40 @@ const emMao = (p) => estadoEstaEm(p, ESTADOS_MEDIDOR);
  * Cada célula traz o número (o fato) sobre uma barra fininha (o contraste).
  * Quem está zerado continua na lista: a ausência de carga é justamente o que se
  * quer enxergar de relance.
+ *
+ * ── DOIS MODOS ─────────────────────────────────────────────────────────────
+ * Sem `recorte`, o medidor é a FILA: o filtro de estado acima manda, e o que
+ * ele mostra é o que cada um tem para fazer, sem data.
+ *
+ * Com `recorte` (o filtro de data ligado na barra), quem manda é a DATA: o
+ * `Pauta` já entrega só os pedidos daquele período, e aqui o filtro de estado
+ * sai de cena. Tem de sair: "o esforço de hoje" inclui o que foi entregue
+ * hoje, e um card entregue não está mais em pauta nem em desenvolvimento —
+ * mantendo o filtro, o número do dia encolheria conforme o time trabalha, o
+ * que é exatamente o contrário do que se quer ler.
  */
-export default function Medidor({ pedidos, cfg }) {
+export default function Medidor({ pedidos, cfg, recorte = null }) {
   const linhas = useMemo(() => {
-    const abertos = pedidos.filter(emMao);
+    // Com recorte de data, o `Pauta` já fez a peneira — aqui entra tudo.
+    const naConta = recorte ? pedidos : pedidos.filter(emMao);
     const escolhidos = (cfg.recursos || []).filter((r) => r.medidor);
 
     return escolhidos.map((r) => {
-      const meus = abertos.filter((p) => achaRecurso(escolhidos, p.azure_assigned_to)?.id === r.id);
+      const meus = naConta.filter((p) => achaRecurso(escolhidos, p.azure_assigned_to)?.id === r.id);
       return {
         nome: r.nome_pauta || r.nome_azure,
         esforco: meus.reduce((s, p) => s + (Number(p.esforco) || 0), 0),
         pedidos: meus.length,
       };
     });
-  }, [pedidos, cfg.recursos]);
+  }, [pedidos, cfg.recursos, recorte]);
 
   /* Zerado pode ser verdade (dia calmo) ou engano (o nome do estado no Azure
      mudou e nada mais bate). Os dois casos são idênticos na tela, então a lista
      dos estados encontrados vai no balão do total — é a primeira coisa que
-     alguém precisa ver para saber de qual dos dois se trata. */
+     alguém precisa ver para saber de qual dos dois se trata. Só vale no modo
+     fila: com recorte de data o estado não entra na conta, então um zero ali
+     quer dizer só "nada marcado para esse período". */
   const estadosVistos = useMemo(() => {
     const s = new Set();
     for (const p of pedidos) {
@@ -60,14 +74,26 @@ export default function Medidor({ pedidos, cfg }) {
   const total = linhas.reduce((s, l) => s + l.esforco, 0);
   const pct = (v) => Math.min(100, (v / ESFORCO_DIA) * 100);
 
+  const oQueConta = recorte
+    ? `com entrega em ${recorte}`
+    : `${ESTADOS_MEDIDOR.join(" e ")} no Azure`;
+
   return (
     <aside className="medidor">
       <div className="med-h">
-        <span className="k">Esforço</span>
+        <span className="k">
+          Esforço
+          {/* O recorte vai junto do rótulo, e não como selo à parte: o número
+              do lado muda de significado com ele, e os dois têm de ser lidos
+              na mesma piscada. */}
+          {recorte && <em className="med-rec">· {recorte}</em>}
+        </span>
         <span className="med-total mono"
           title={
-            `${total} de esforço em mão no time — cards ${ESTADOS_MEDIDOR.join(" e ")} no Azure.` +
-            (total === 0 && pedidos.length
+            (recorte
+              ? `${total} de esforço com entrega em ${recorte}, incluindo o que já foi entregue. Card cancelado fica fora.`
+              : `${total} de esforço em mão no time — cards ${ESTADOS_MEDIDOR.join(" e ")} no Azure.`) +
+            (!recorte && total === 0 && pedidos.length
               ? `\n\nNenhum card nesses dois estados. Os estados que aparecem na pauta agora são: ` +
                 `${estadosVistos.join(", ") || "nenhum"}.`
               : "")
@@ -81,7 +107,7 @@ export default function Medidor({ pedidos, cfg }) {
           {linhas.map((l) => (
             <div className={`med-cel${l.esforco ? "" : " vazio"}${l.esforco > ESFORCO_DIA ? " estourou" : ""}`} key={l.nome}
               title={`${l.nome}: ${l.esforco} de esforço em ${l.pedidos} ${l.pedidos === 1 ? "card" : "cards"}` +
-                     ` ${ESTADOS_MEDIDOR.join(" ou ")} no Azure` +
+                     ` ${oQueConta}` +
                      ` — ${Math.round((l.esforco / ESFORCO_DIA) * 100)}% de um dia cheio (${ESFORCO_DIA})`}>
               <span className="med-num mono">{l.esforco}</span>
               <span className="med-nome">{l.nome}</span>

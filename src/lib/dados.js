@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
+import { azureEntregou } from "@/lib/constantes";
 
 /**
  * Carrega cadastros + pedidos, mantém a grade viva por Realtime e expõe as
@@ -10,6 +11,21 @@ import { chamaFuncao } from "@/lib/funcoes";
  */
 /** De quanto em quanto tempo a tela relê o Azure por conta própria. */
 export const INTERVALO_AZURE = 5 * 60 * 1000;
+
+/**
+ * Card que o Azure já deu como entregue entra na tela com o ✓ marcado.
+ *
+ * A derivação mora AQUI, na entrada dos dados, e não em cada lugar que lê
+ * `entregue` — são cinco: a grade, o resumo do topo, os relatórios, os
+ * gráficos e a situação de cada pedido. Derivar em cinco lugares é garantir
+ * que um dia eles discordem: a tela mostraria o ✓ e o relatório contaria como
+ * não entregue. Passando na porta, a plataforma inteira vê o mesmo valor.
+ *
+ * O banco continua com o `entregue` que a pessoa gravou — esta coluna é da
+ * casa, e o sync não escreve nela. O que muda é só a leitura.
+ */
+const comEntregaDoAzure = (p) =>
+  p && !p.entregue && azureEntregou(p) ? { ...p, entregue: true } : p;
 
 export function useDados() {
   const [cfg, setCfg] = useState({ clientes: [], demandantes: [], tipos: [], status: [], recursos: [] });
@@ -58,7 +74,7 @@ export function useDados() {
         status: sts.data || [],
         recursos: rec.data || [],
       });
-      setPedidos(peds || []);
+      setPedidos((peds || []).map(comEntregaDoAzure));
       setErro(null);
     } catch (e) {
       if (montado.current) setErro(String(e.message || e));
@@ -142,10 +158,11 @@ export function useDados() {
       .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, (ev) => {
         setPedidos((atual) => {
           if (ev.eventType === "DELETE") return atual.filter((p) => p.id !== ev.old.id);
-          const i = atual.findIndex((p) => p.id === ev.new.id);
-          if (i === -1) return [ev.new, ...atual];
+          const chegou = comEntregaDoAzure(ev.new);
+          const i = atual.findIndex((p) => p.id === chegou.id);
+          if (i === -1) return [chegou, ...atual];
           const copia = atual.slice();
-          copia[i] = { ...copia[i], ...ev.new };
+          copia[i] = comEntregaDoAzure({ ...copia[i], ...ev.new });
           return copia;
         });
       })
@@ -190,7 +207,7 @@ export function useDados() {
     if (!sb) return { erro: "Sem conexão." };
     const { data, error } = await sb.from("pedidos").insert(dados).select().single();
     if (error) return { erro: error.message };
-    setPedidos((atual) => (atual.some((p) => p.id === data.id) ? atual : [data, ...atual]));
+    setPedidos((atual) => (atual.some((p) => p.id === data.id) ? atual : [comEntregaDoAzure(data), ...atual]));
     return { pedido: data };
   }, []);
 

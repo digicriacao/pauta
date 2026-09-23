@@ -242,6 +242,19 @@ export const ESFORCO_DIA = 10;
  *  porque é este o nome que o time usa quando conversa sobre a coluna. */
 export const ESTADOS_MEDIDOR = ["EM PAUTA", "EM DESENVOLVIMENTO"];
 
+/* ── "o Azure já entregou" ─────────────────────────────────────────────────
+   A lista é maior que o "ENTREGUE" de `ESTADOS_AZURE` de propósito: aquele
+   conhece só os nomes internos do processo padrão (Done, Closed, Resolved), e
+   um processo pode chamar o fim de "Concluído" ou "Finalizado". A comparação
+   passa por `estadoEstaEm`, que ignora acento e caixa — foi a falta disso que
+   zerou o medidor inteiro uma vez. */
+export const ESTADOS_ENTREGUE = [
+  "ENTREGUE", "Done", "Closed", "Resolved", "Completed", "Concluído", "Finalizado",
+];
+
+/** O Azure diz que este card acabou? */
+export const azureEntregou = (p) => estadoEstaEm(p, ESTADOS_ENTREGUE);
+
 /* ── Zoom ───────────────────────────────────────────────────────────────────
    A grade tem dezessete colunas e nem toda tela cabe todas. Em vez de espremer
    uma por uma, a pessoa encolhe a página inteira — o mesmo que o zoom do

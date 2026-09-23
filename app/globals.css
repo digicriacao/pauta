@@ -569,6 +569,11 @@ span.chip.fixo{display:flex;align-items:center;justify-content:center;width:100%
    "escala 10", que saiu — sem passar a tarefa adiante, o total colava no
    rótulo. */
 .med-h .k{margin-right:auto;font-family:var(--mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+/* O recorte de data do medidor. Fica DENTRO do rótulo, porque o número do lado
+   muda de significado com ele: "Esforço 184" e "Esforço · hoje 12" são duas
+   contas diferentes, e ler uma pensando na outra é o único jeito de o medidor
+   mentir. Em rosa, que é a cor do que está ativo em toda a interface. */
+.med-rec{font-style:normal;color:var(--accent-ink);margin-left:3px}
 .med-total{font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
 .med-cels{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(52px,1fr);gap:10px}
 .med-cel{display:flex;flex-direction:column;gap:2px;min-width:0}

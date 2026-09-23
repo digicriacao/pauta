@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { COLUNAS, LS_LARGURAS, MAPA_ESTADO, corEstado } from "@/lib/constantes";
+import { COLUNAS, LS_LARGURAS, MAPA_ESTADO, corEstado, azureEntregou } from "@/lib/constantes";
 import { fmtBR, deInputLocal, hojeISO } from "@/lib/formato";
 import { urlCard, urlNovoCard, idDoLink } from "@/lib/azure-cliente";
 import { useLarguras } from "@/lib/larguras";
@@ -67,6 +67,8 @@ function Linha({ p, cfg, colunas, podeEditar, salvar, remover, marcar, aoVincula
   // cancelado: é o único destaque que pede ação agora, não atenção depois.
   const fura = /fura/i.test(cfg.tipos.find((t) => t.id === p.tipo_id)?.nome || "");
   const excecao = fura ? "fura" : st?.cancelamento ? "cancelada" : st?.pausa ? "parada" : "";
+  // O ✓ veio do Azure, e não de alguém ter clicado.
+  const peloAzure = azureEntregou(p);
 
   /* As células ficam num mapa por id, e a ORDEM de saída vem de `colunas`.
      Antes eram dezessete <td> soltos em sequência; com o filtro de colunas isso
@@ -189,7 +191,10 @@ function Linha({ p, cfg, colunas, podeEditar, salvar, remover, marcar, aoVincula
         <Chip valor={p.status_interno_id} opcoes={cfg.status} desabilitado={dis}
           aoMudar={(v) => {
             const st = cfg.status.find((s) => s.id === v);
-            salvar(p.id, { status_interno_id: v, entregue: !!st?.entrega });
+            // `|| peloAzure`: trocar para PARADO num card que o Azure já
+            // entregou não pode gravar entregue:false — a tela mostraria o ✓
+            // (derivado) e o banco diria o contrário.
+            salvar(p.id, { status_interno_id: v, entregue: !!st?.entrega || peloAzure });
           }} />
       </td>
     ),
@@ -201,8 +206,15 @@ function Linha({ p, cfg, colunas, podeEditar, salvar, remover, marcar, aoVincula
     ),
     entregue: (
       <td key="entregue">
-        <button className={`chk ${p.entregue ? "on" : ""}`} disabled={dis}
-          title={p.entregue ? "Entregue — clique para reabrir" : "Marcar como entregue"}
+        {/* Card que o Azure deu como entregue vem com o ✓ marcado e NÃO
+            desmarca: o estado do card é do Azure, e desmarcar aqui faria a
+            pauta contradizer a fonte da verdade sem mudar nada lá. Quem
+            precisa reabrir, reabre no card — e a pauta acompanha. */}
+        <button className={`chk ${p.entregue ? "on" : ""}`}
+          disabled={dis || peloAzure}
+          title={peloAzure
+            ? "O Azure diz que este card está entregue. Para reabrir, mude o estado no card — a pauta acompanha."
+            : p.entregue ? "Entregue — clique para reabrir" : "Marcar como entregue"}
           onClick={() => marcar(p)}>✓</button>
       </td>
     ),

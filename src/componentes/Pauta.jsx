@@ -7,7 +7,7 @@ import { nomeCurto } from "@/lib/recursos";
 import { supabase } from "@/lib/supabase-browser";
 import { chamaFuncao } from "@/lib/funcoes";
 import { mesDe, mesesDoAno, hojeISO } from "@/lib/formato";
-import { PERIODO_VAZIO, periodoAtivo, noPeriodo, detalhePeriodo, cruzaMes, mesDoPeriodo } from "@/lib/periodo";
+import { PERIODO_VAZIO, periodoAtivo, noPeriodo, detalhePeriodo, cruzaMes, mesDoPeriodo, rotuloPeriodo } from "@/lib/periodo";
 import { ORDEM_PADRAO, LS_ORDEM, MAPA_ESTADO, posEstado, FILAS, ehEnviado, COLUNAS, LS_COLUNAS } from "@/lib/constantes";
 import Cabecalho from "./Cabecalho";
 import Resumo from "./Resumo";
@@ -205,6 +205,26 @@ export default function Pauta() {
   const comPeriodo = periodoAtivo(filtros.periodo, hoje);
   const base = comPeriodo || filtros.semCard ? ordenados : doMes;
 
+  /* O medidor do topo segue o filtro de data.
+
+     Sem filtro, ele é a FILA: o esforço dos cards que o Azure diz estar em
+     pauta e em desenvolvimento, sem recorte de data — é o que cada um tem para
+     fazer.
+
+     Com filtro, quem manda é a DATA: o esforço com entrega marcada naquele
+     período, inclusive o que já saiu. Incluir o entregue é o ponto: "o esforço
+     de hoje" não pode encolher conforme o time entrega.
+
+     Card CANCELADO fica fora nos dois modos — trabalho cancelado não é carga de
+     ninguém, e sem esta linha um cancelamento de última hora inflaria o dia. */
+  const pedidosMedidor = useMemo(() => {
+    if (!comPeriodo) return pedidos;
+    const cancelados = new Set((cfg.status || []).filter((s) => s.cancelamento).map((s) => s.id));
+    return pedidos.filter(
+      (p) => !cancelados.has(p.status_interno_id) && noPeriodo(p, filtros.periodo, hoje)
+    );
+  }, [pedidos, cfg.status, comPeriodo, filtros.periodo, hoje]);
+
   /** Linha sem card é dívida, não recorte de mês: conta a pauta inteira. */
   const semCardTotal = useMemo(
     () => pedidos.filter((p) => !p.azure_id).length,
@@ -353,7 +373,10 @@ export default function Pauta() {
         {vista === "pauta" && area === "pauta" && (
           <div className="topo">
             <Resumo pedidos={doMes} mesSel={mesSel} cfg={cfg} />
-            <Medidor pedidos={pedidos} cfg={cfg} />
+            <Medidor
+              pedidos={pedidosMedidor} cfg={cfg}
+              recorte={comPeriodo ? rotuloPeriodo(filtros.periodo, hoje) : null}
+            />
           </div>
         )}
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { fmtBRL, deInputLocal } from "@/lib/formato";
 import {
   MAPA_ESTADO, corEstado, statusPadraoDe, STATUS_PADRAO, ANO_PADRAO, HORA_PADRAO,
+  azureEntregou,
 } from "@/lib/constantes";
 
 /**
@@ -59,7 +60,8 @@ export default function FocoPedido({ card, cfg, aoConfirmar, aoCancelar, salvand
       status_interno_id: status ? Number(status) : null,
       entrega_em: deInputLocal(hora),
       observacao: obs || null,
-      entregue: !!st?.entrega,
+      // Colar um card que o Azure já deu como entregue entra com o ✓.
+      entregue: !!st?.entrega || azureEntregou(card),
     });
   }
 
