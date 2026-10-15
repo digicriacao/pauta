@@ -67,7 +67,7 @@ function Zoom() {
 export default function Cabecalho({
   meses, mesAtual, mesSel, setMesSel, contaMes,
   perfil, podeEditar, ehAdmin, aoLogin, aoAdmin, vista, setVista, foraDaPauta = 0,
-  eu, gente = [], aoAjuda,
+  eu, gente = [], aoAjuda, aoFerramentas,
 }) {
   const i = meses.indexOf(mesAtual);
   const anteriores = meses.slice(0, Math.max(0, i - 1));
@@ -161,6 +161,15 @@ export default function Cabecalho({
             centro. O `title` continua explicando cada botão no passar do mouse,
             então nada de fato se perde. */}
         <div className="hlado dir">
+        {/* Fica encostado na borda ESQUERDA desta coluna (`margin-right:auto`),
+            e não junto dos outros: ele não é ação sobre a pauta, é saída para
+            outra plataforma. Grudado no "Editando" viraria mais um botão de
+            trabalho; solto no vão entre os dois grupos, lê-se como o que é. */}
+        <button className="hbtn fer-btn" onClick={aoFerramentas}
+          title="Outras plataformas da Digi — Sof.ia, Otimizador, Réguas e CriaDigi">
+          🧰<span className="rot">Ferramentas</span>
+        </button>
+
         <button className={`hbtn ${podeEditar ? "on" : ""}`} onClick={aoLogin}
           title={podeEditar ? `Editando como ${perfil.usuario}` : perfil ? `${perfil.usuario} — sem permissão de edição` : "Entrar para poder editar"}>
           {podeEditar ? "✎" : perfil ? "👤" : "🔒"}

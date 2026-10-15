@@ -21,6 +21,7 @@ import Fila from "./Fila";
 import Medidor from "./Medidor";
 import Confronto from "./Confronto";
 import Ajuda from "./Ajuda";
+import Ferramentas from "./Ferramentas";
 import FiltroData from "./FiltroData";
 import FiltroColunas from "./FiltroColunas";
 
@@ -50,6 +51,8 @@ export default function Pauta() {
   const [mostraAdmin, setMostraAdmin] = useState(false);
   // Qual tabela de referência está aberta: "artes", "esforco" ou nenhuma.
   const [ajuda, setAjuda] = useState(null);
+  // Os atalhos para as outras plataformas da Digi.
+  const [ferramentas, setFerramentas] = useState(false);
   const [toast, setToast] = useState("");
   const [dicaTxt, setDicaTxt] = useState(null);
   const [dicaPos, setDicaPos] = useState({ x: 0, y: 0 });
@@ -366,7 +369,7 @@ export default function Pauta() {
         perfil={perfil} podeEditar={podeEditar} ehAdmin={ehAdmin}
         aoLogin={() => setMostraLogin(true)} aoAdmin={() => setMostraAdmin(true)}
         vista={vista} setVista={setVista} foraDaPauta={confronto.faltando}
-        eu={eu} gente={gente} aoAjuda={setAjuda}
+        eu={eu} gente={gente} aoAjuda={setAjuda} aoFerramentas={() => setFerramentas(true)}
       />
 
       <main className="wrap">
@@ -553,6 +556,8 @@ export default function Pauta() {
         <Login perfil={perfil} podeEditar={podeEditar}
           aoFechar={() => setMostraLogin(false)} aoEntrar={relerSessao} aoSair={sair} />
       )}
+
+      {ferramentas && <Ferramentas aoFechar={() => setFerramentas(false)} />}
 
       {ajuda && (
         <Ajuda chave={ajuda} ehAdmin={ehAdmin} aviso={aviso} aoFechar={() => setAjuda(null)} />
