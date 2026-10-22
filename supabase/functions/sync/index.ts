@@ -107,6 +107,10 @@ function normaliza(item: any) {
     titulo: f["System.Title"] ?? null,
     azure_state: f["System.State"] ?? null,
     azure_assigned_to: f["System.AssignedTo"]?.displayName ?? null,
+    /* Quem abriu o card. Vem do mesmo tipo de campo do AssignedTo — um
+       objeto de identidade —, então também é o `displayName` que interessa.
+       É coluna do Azure, então o sync pode escrever nela. */
+    azure_criado_por: f["System.CreatedBy"]?.displayName ?? null,
     azure_changed_at: f["System.ChangedDate"] ?? null,
     data_solicitacao: soData(f["System.CreatedDate"]),
     data_entrega: soData(f[CAMPO_ENTREGA]),
@@ -183,7 +187,8 @@ async function buscaCardsEmLote(ids: number[]) {
  * plataforma e não são tocados — por isso não existe conflito.
  */
 const CAMPOS_DO_AZURE = [
-  "titulo", "campanha", "azure_state", "azure_assigned_to", "azure_changed_at",
+  "titulo", "campanha", "azure_state", "azure_assigned_to", "azure_criado_por",
+  "azure_changed_at",
   "data_solicitacao", "data_entrega", "esforco", "pasta_codigo", "pasta_url",
 ] as const;
 

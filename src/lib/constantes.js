@@ -215,6 +215,7 @@ export const BLOCOS_RELATORIO = [
   { id: "artesRec",   grupo: "Gráficos", nome: "Artes por recurso" },
   { id: "esforcoRec", grupo: "Gráficos", nome: "Esforço por recurso" },
   { id: "demandante", grupo: "Gráficos", nome: "Pedidos por demandante" },
+  { id: "abriu",      grupo: "Gráficos", nome: "Quem abriu os cards" },
   { id: "tipo",       grupo: "Gráficos", nome: "Distribuição por tipo" },
   { id: "status",     grupo: "Gráficos", nome: "Status interno" },
   { id: "atrito",     grupo: "Gráficos", nome: "Parados e cancelados por demandante" },

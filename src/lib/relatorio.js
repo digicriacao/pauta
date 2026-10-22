@@ -35,6 +35,10 @@ export function nomes(cfg) {
     dem: (p) => cfg.demandantes.find((d) => d.id === p.demandante_id)?.nome || "",
     tipo: (p) => cfg.tipos.find((t) => t.id === p.tipo_id)?.nome || "",
     st: (p) => cfg.status.find((s) => s.id === p.status_interno_id)?.nome || "",
+    /* Quem ABRIU o card no Azure — não confundir com o demandante, que é
+       escrito aqui na pauta. Pode ser a mesma pessoa e pode não ser: quem
+       pede nem sempre é quem abre. */
+    abriu: (p) => p.azure_criado_por || "",
   };
 }
 
@@ -137,6 +141,13 @@ export function calcula(base, cfg) {
     esforcoPorRecurso: topN(agrupa(base, nm.rec, (p) => Number(p.esforco) || 0)),
     demandantes: topN(agrupa(base, nm.dem)),
     demandantesTodos: agrupa(base, nm.dem),
+
+    quemAbriu: topN(agrupa(base, nm.abriu)),
+    quemAbriuTodos: agrupa(base, nm.abriu),
+    /* Quantos cards do recorte ainda não têm o autor registrado. Vale dizer
+       na tela: sem esse número, um bloco curto parece um time pequeno
+       quando na verdade é dado que ainda não chegou do Azure. */
+    semCriador: base.filter((p) => p.azure_id && !p.azure_criado_por).length,
 
     porTipo: cfg.tipos
       .map((t) => ({ rot: t.nome, cor: t.cor, v: base.filter((p) => p.tipo_id === t.id).length }))

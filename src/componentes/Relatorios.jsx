@@ -83,6 +83,7 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
     if (tem("artesRec")) secao("Artes por recurso", ["Recurso", "Artes"], d.artesPorRecurso.map((x) => [x.rot, x.v]));
     if (tem("esforcoRec")) secao("Esforço por recurso", ["Recurso", "Esforço"], d.esforcoPorRecurso.map((x) => [x.rot, x.v]));
     if (tem("demandante")) secao("Pedidos por demandante", ["Demandante", "Pedidos"], d.demandantesTodos.map((x) => [x.rot, x.v]));
+    if (tem("abriu")) secao("Quem abriu os cards", ["Quem abriu", "Cards"], d.quemAbriuTodos.map((x) => [x.rot, x.v]));
     if (tem("tipo")) secao("Distribuição por tipo", ["Tipo", "Pedidos"], d.porTipo.map((x) => [x.rot, x.v]));
     if (tem("status")) secao("Status interno", ["Status", "Pedidos"], d.porStatus.map((x) => [x.rot, x.v]));
     if (tem("atrito")) secao("Parados e cancelados por demandante", ["Demandante", "Parados", "Cancelados"], d.atritoDem.map((x) => [x.rot, x.valores[0], x.valores[1]]));
@@ -345,6 +346,22 @@ export default function Relatorios({ pedidos, cfg, mesSel, aviso, dica }) {
             <Legenda itens={d.demandantes.map((x) => x.rot)} cores={PALETA} />
             <BarrasH dados={d.demandantes} cores={PALETA} dica={dica} unidade="pedidos" />
           </>)}
+        </Cartao>
+
+        <Cartao id="abriu" titulo="Quem abriu os cards" sub="quem criou o card no Azure">
+          {listaOuVazio(d.quemAbriu, <>
+            <Legenda itens={d.quemAbriu.map((x) => x.rot)} cores={PALETA} />
+            <BarrasH dados={d.quemAbriu} cores={PALETA} dica={dica} unidade="cards" />
+            {/* Sem este aviso, um bloco curto parece um time pequeno quando na
+                verdade é dado que ainda não chegou do Azure. */}
+            {d.semCriador > 0 && (
+              <p className="nada">
+                {d.semCriador} {d.semCriador === 1 ? "card ainda sem" : "cards ainda sem"} autor
+                registrado — o dado vem do Azure e preenche sozinho no próximo refresco.
+              </p>
+            )}
+          </>,
+          "Nenhum card do recorte tem o autor registrado. O dado vem do Azure e preenche sozinho no primeiro refresco depois de publicar a função.")}
         </Cartao>
 
         <Cartao id="tipo" titulo="Distribuição por tipo" sub="mesmas cores da grade">
